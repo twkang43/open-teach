@@ -1,0 +1,3 @@
+[submodule "third_party/OpenTeach-Controllers"]
+	path = third_party/OpenTeach-Controllers
+	url = https://github.com/NYU-robot-learning/OpenTeach-Controllers
