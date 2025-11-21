@@ -38,7 +38,7 @@ class Filter:
         return np.concatenate([self.pos_state, self.ori_state])
 
 # UR arm operator class
-class UROperator(Operator):
+class URArmOperator(Operator):
     def __init__(
         self,
         host, transformed_keypoints_port,

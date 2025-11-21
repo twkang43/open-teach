@@ -36,13 +36,17 @@ operators:
     host: ${host_address}
     transformed_keypoints_port: ${transformed_position_keypoint_port}
     arm_resolution_port: ${resolution_button_publish_port} 
+    gripper_port: ${gripper_publish_port_right}
     use_filter: False
-    teleoperation_reset_port: ${teleop_reset_publish_port}
+    cartesian_publisher_port: ${cartesian_publisher_port}
+    joint_publisher_port: ${joint_publisher_port}
+    cartesian_command_publisher_port: ${cartesian_command_publisher_port}
 
 # List of controller classes used
 controllers:
   -
     _target_: openteach.robot.ur.URArm
+    ip: ${ur_ip}
     record: False
 
 
@@ -51,3 +55,4 @@ recorded_data:
   - 
     - joint_states
     - cartesian_states
+    - gripper_states
