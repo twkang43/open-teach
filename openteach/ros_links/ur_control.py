@@ -58,8 +58,8 @@ class RTDE:
     def move_joint(
         self,
         joint_values: List[float],
-        speed: float = 0.1,
-        acceleration: float = 0.1,
+        speed: float = 0.0,
+        acceleration: float = 0.0,
         # a bool specifying if the move command should be asynchronous
         asynchronous: bool = False,
     ):
@@ -82,7 +82,7 @@ class RTDE:
     def speed_joint(
         self,
         speeds: List[float],
-        acceleration: float = 0.1,
+        acceleration: float = 0.0,
         time: float = 0.0,
     ):
         """Accelerate linearly and continue with constant joint speed."""
@@ -91,8 +91,8 @@ class RTDE:
     def move_tool(
         self,
         pose: List[float],
-        speed: float = 0.1,
-        acceleration: float = 0.1,
+        speed: float = 0.0,
+        acceleration: float = 0.0,
         # a bool specifying if the move command should be asynchronous
         asynchronous: bool = False,
     ):
@@ -115,7 +115,7 @@ class RTDE:
     def speed_tool(
         self,
         speeds: List[float],
-        acceleration: float = 0.1,
+        acceleration: float = 0.0,
         time: float = 0.0,
     ):
         """Accelerate linearly and continue with constant joint speed."""
@@ -152,8 +152,8 @@ class RTDE:
     def servo_tool(
         self,
         pose: List[float],  # Target joint positions
-        speed: float = 0.1,  # joint velocity
-        acceleration: float = 0.1,  # joint acceleration
+        speed: float = 0.0,  # joint velocity
+        acceleration: float = 0.0,  # joint acceleration
         time: float = 0.008,  # time to control the robot
         lookahead_time: float = 0.1,  # project the current position forward
         gain: int = 300,  # P-term as in PID controller
@@ -273,7 +273,7 @@ class DexArmControl():
         pose[:3] = [p / SCALE_FACTOR for p in pose[:3]]  # mm -> m
         self.robot.move_tool(
             pose=pose,
-            speed=0.1,  # TODO: tune speed and acceleration
+            speed=0.0,  # TODO: tune speed and acceleration
             acceleration=0.1,
             asynchronous=False
         )
@@ -284,7 +284,7 @@ class DexArmControl():
         
         self.robot.servo_tool(
             pose=pose,
-            speed=0.1,  # TODO: tune speed and acceleration
+            speed=0.0,  # TODO: tune speed and acceleration
             acceleration=0.1,
             time=0.008,
             lookahead_time=0.1,

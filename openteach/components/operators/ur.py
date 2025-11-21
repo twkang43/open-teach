@@ -90,16 +90,14 @@ class URArmOperator(Operator):
         )
         # Define Robot object
         self._robot = URArm(ip=UR_IP)
-        self.robot.reset()
-       
-       
+        self._robot.home()
        
         
         # Get the initial pose of the robot
         home_pose=np.array(self.robot.get_cartesian_position())
         self.robot_init_H = self.robot_pose_aa_to_affine(home_pose)
         self._timer = FrequencyTimer(VR_FREQ) 
-
+        
         # Use the filter
         self.use_filter = use_filter
         if use_filter:
