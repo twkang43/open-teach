@@ -120,10 +120,6 @@ SCALE_FACTOR= 1000
 RIGHT_ARM_IP = "192.168.86.230" # For Right XArm
 LEFT_ARM_IP = "192.168.86.216" # For Left XArm
 
-# UR Robot Constants
-
-UR_IP = "192.168.86.230" # For UR arm
-
 BIMANUAL_LEFT_HOME = [206,0,475,3.142,0,0]
 BIMANUAL_RIGHT_HOME = [206,0,475,3.142,0,0] 
 
@@ -131,3 +127,7 @@ ROBOT_HOME_POSE_AA = [206.0, -0.0, 475, 3.142, 0.0, 0.0]
 ROBOT_HOME_JS = [0.072358, -0.95536, -0.040176,
                  0.661511, -0.032836, 1.616466, 0.047656]
 
+# UR Robot Constants
+
+UR_IP = "147.46.76.176" # For UR arm
+UR_HOME = [0, -1.57, -1.57, -1.57, 1.57, 0]

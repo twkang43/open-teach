@@ -5,9 +5,9 @@ from copy import deepcopy as copy
 from enum import Enum
 import math
 
-# TODO: Use UR API (RTDE)
 import rtde_control
 import rtde_receive
+from typing import List
 
 from openteach.constants import SCALE_FACTOR
 from scipy.spatial.transform import Rotation as R
@@ -17,138 +17,228 @@ class RobotControlMode(Enum):
     CARTESIAN_CONTROL = 0
     SERVO_CONTROL = 1
 
-# Wrapper for UR
-class Robot():
-    def __init__(self, ip="192.168.86.230", is_radian=True):
-        self.ip = ip
-        self.is_radian = is_radian
-        
-        self.rtde_c = rtde_control.RTDEControlInterface(self.ip)
-        self.rtde_r = rtde_receive.RTDEReceiveInterface(self.ip)
-        
-        self.has_error = False
-        
-        self._gripper_enabled = False
-        self._gripper_position = 0
-        
-    
-    # Clear functions
-    def _clean_error(self):
-        pass
-    
-    def _clean_warn(self):
-        pass
-    
-    def _motion_enable(self, enable=True):
-        pass
+"""
+Codes from UR RTDE interface
+https://github.com/elpis-lab/UR10_RTDE/blob/60dd19a782e61596a23aa0b1e8bb4a3036abea83/rtde/rtde.py
+"""
+class RTDE:
+    def __init__(self, robot_ip: str = "192.168.1.102"):
+        self.rtde_c = rtde_control.RTDEControlInterface(robot_ip)
+        self.rtde_r = rtde_receive.RTDEReceiveInterface(robot_ip)
 
-    def clear(self):
-        self._clean_error()
-        self._clean_warn()
-        # self._motion_enable(enable=False)
-        self._motion_enable(enable=True)
+    def get_joint_values(self) -> List[float]:
+        """Get the joint positions in radians."""
+        return self.rtde_r.getActualQ()
 
-    # Set mode and state
-    def _set_mode(self, mode: RobotControlMode):
-        pass
-    
-    def _set_state(self, state: int = 0):
-        pass
-    
-    def _set_gripper_mode(self, mode: int = 0):
-        pass
-    
-    def set_mode_and_state(self, mode: RobotControlMode, state: int = 0):
-        self._set_mode(mode.value)
-        self._set_state(state)
-        self._set_gripper_mode(0)  # Gripper is always in position control.
-    
-    # Setters
-    def set_servo_angle(self, angle, wait=True, is_radian=True, mvacc=80, speed=10):
-        pass
-    
-    def set_gripper_position(self, position, wait=True):
-        pass
-    
-    def set_servo_cartesian_aa(self, pose_aa, wait=False, relative=False, mvacc=200, speed=50):
-        pass
-    
-    # Getters
-    def get_arm_joint_state(self):
-        pass
-    
-    def get_cartesian_state(self):
-        pass
-    
-    def get_position_aa(self):
-        pass
-    
-    def get_servo_angle(self):
-        pass
-    
-    def get_gripper_position(self):
-        pass
-    
-    # Reset function
-    def home_arm(self):
-        pass
+    def get_joint_speed(self) -> List[float]:
+        """Get the joint speed in radians per second."""
+        return self.rtde_r.getActualQd()
 
-    def reset(self):
-        # Clean error
-        self.clear()
-        print("Slow reset working")
-        self.set_mode_and_state(RobotControlMode.CARTESIAN_CONTROL, 0)
-        status = self.set_servo_angle(angle=ROBOT_HOME_JS, wait=True, is_radian=True, speed=math.radians(50))
-        assert status == 0, "Failed to set robot at home joint position"
-        self.set_mode_and_state(RobotControlMode.SERVO_CONTROL, 0)
-        self.set_gripper_position(800.0, wait=True)
-        time.sleep(0.1)
+    def get_tool_pose(self) -> List[float]:
+        """Get the pose of the Tool Center Point (TCP) in Cartesian space.
 
+        Return [x, y, z, rx, ry, rz] position + rotation vector
+        """
+        return self.rtde_r.getActualTCPPose()
+
+    def get_tool_speed(self) -> List[float]:
+        """Get the speed of the Tool Center Point (TCP) in Cartesian space.
+
+        Return [vx, vy, vz, wx, wy, wz]
+        """
+        return self.rtde_r.getActualTCPSpeed()
+
+    def set_tool_pose(self, tcp: List[float]):
+        """Set the Tool Center Point (TCP) in Cartesian space.
+        
+        The pose is defined as [x, y, z, rx, ry, rz] position + rotation vector
+        """
+        self.rtde_c.setTcp(tcp)
+
+    def move_joint(
+        self,
+        joint_values: List[float],
+        speed: float = 0.1,
+        acceleration: float = 0.1,
+        # a bool specifying if the move command should be asynchronous
+        asynchronous: bool = False,
+    ):
+        """Move the robot to the target joint positions."""
+        self.rtde_c.moveJ(joint_values, speed, acceleration, asynchronous)
+
+    def move_joint_trajectory(
+        self,
+        path: List[List[float]],
+        # a bool specifying if the move command should be asynchronous
+        asynchronous: bool = False,
+    ):
+        """Move the robot to follow a given path/trajectory,
+        with each waypoint defined as
+        [q1, q2, q3, q4, q5, q6, speed, acceleration, blend]
+        (angles + others)
+        """
+        self.rtde_c.moveJ(path, asynchronous)
+
+    def speed_joint(
+        self,
+        speeds: List[float],
+        acceleration: float = 0.1,
+        time: float = 0.0,
+    ):
+        """Accelerate linearly and continue with constant joint speed."""
+        self.rtde_c.speedJ(speeds, acceleration, time)
+
+    def move_tool(
+        self,
+        pose: List[float],
+        speed: float = 0.1,
+        acceleration: float = 0.1,
+        # a bool specifying if the move command should be asynchronous
+        asynchronous: bool = False,
+    ):
+        """Move the robot to the tool position."""
+        self.rtde_c.moveL(pose, speed, acceleration, asynchronous)
+
+    def move_tool_trajectory(
+        self,
+        path: List[List[float]],
+        # a bool specifying if the move command should be asynchronous
+        asynchronous: bool = False,
+    ):
+        """Move the robot to follow a given tool path/trajectory,
+        with each waypoint defined as
+        [x, y, z, rx, ry, rz, speed, acceleration, blend]
+        (position + rotation vector + others)
+        """
+        self.rtde_c.moveL(path, asynchronous)
+
+    def speed_tool(
+        self,
+        speeds: List[float],
+        acceleration: float = 0.1,
+        time: float = 0.0,
+    ):
+        """Accelerate linearly and continue with constant joint speed."""
+        self.rtde_c.speedL(speeds, acceleration, time)
+
+    def servo_joint(
+        self,
+        joint_values: List[float],  # Target joint positions
+        speed: float = 0,  # joint velocity
+        acceleration: float = 0,  # joint acceleration
+        time: float = 0.008,  # time to control the robot
+        lookahead_time: float = 0.1,  # project the current position forward
+        gain: int = 300,  # P-term as in PID controller
+    ):
+        """Used to perform online realtime joint control
+
+        The gain parameter works the same way as the P-term of a PID controller
+        where it adjusts the current position towards the desired (q).
+        The higher the gain, the faster reaction the robot will have.
+
+        The parameter lookahead_time is used to project the current position
+        forward in time with the current velocity. A low value gives fast
+        reaction, a high value prevents overshoot.
+
+        Note: A high gain or a short lookahead time may cause instability and
+        vibrations. Especially if the target positions are noisy or updated
+        at a low frequency It is preferred to call this function
+        with a new setpoint (q) in each time step
+        """
+        self.rtde_c.servoJ(
+            joint_values, speed, acceleration, time, lookahead_time, gain
+        )
+
+    def servo_tool(
+        self,
+        pose: List[float],  # Target joint positions
+        speed: float = 0.1,  # joint velocity
+        acceleration: float = 0.1,  # joint acceleration
+        time: float = 0.008,  # time to control the robot
+        lookahead_time: float = 0.1,  # project the current position forward
+        gain: int = 300,  # P-term as in PID controller
+    ):
+        """Used to perform online realtime tool control
+
+        The gain parameter works the same way as the P-term of a PID controller
+        where it adjusts the current position towards the desired (q).
+        The higher the gain, the faster reaction the robot will have.
+
+        The parameter lookahead_time is used to project the current position
+        forward in time with the current velocity. A low value gives fast
+        reaction, a high value prevents overshoot.
+
+        Note: A high gain or a short lookahead time may cause instability and
+        vibrations. Especially if the target positions are noisy or updated
+        at a low frequency It is preferred to call this function
+        with a new setpoint (q) in each time step
+        """
+        # Tool pose [x, y, z, rx, ry, rz] position + rotation vector
+        self.rtde_c.servoL(
+            pose, speed, acceleration, time, lookahead_time, gain
+        )
+
+    def stop(
+        self,
+        a: float = 2.0,  # joint acceleration
+        # a bool specifying if the move command should be asynchronous
+        asynchronous: bool = False,
+    ):
+        """Stop the robot."""
+        self.rtde_c.stopJ(a, asynchronous)
+
+    def stop_script(self):
+        """Terminate the script on controller"""
+        self.rtde_c.stopScript()
 
 
 class DexArmControl():
-    def __init__(self,ip,  record_type=None):
-
-        # if pub_port is set to None it will mean that
-        # this will only be used for listening to ur and not commanding
-        # try:
-        #     rospy.init_node("dex_arm", disable_signals = True, anonymous = True)
-        # except:
-        #     pass
-    
-       
+    def __init__(self, ip, record_type=None):
         #self._init_ur_arm_control(record)
-        self.robot = Robot(ip, is_radian=True) 
+        self.robot = RTDE(robot_ip=ip) 
 
     # Controller initializers
-    def _init_ur_control(self):
-        self.robot.reset()
+    # def _init_ur_control(self):
+    #     self.robot.reset()
         
-        status, home_pose = self.robot.get_position_aa()
-        assert status == 0, "Failed to get robot position"
-        home_affine = self.robot_pose_aa_to_affine(home_pose)
-        # Initialize timestamp; used to send messages to the robot at a fixed frequency.
-        last_sent_msg_ts = time.time()
+    #     status, home_pose = self.robot.get_position_aa()
+    #     assert status == 0, "Failed to get robot position"
+    #     home_affine = self.robot_pose_aa_to_affine(home_pose)
+    #     # Initialize timestamp; used to send messages to the robot at a fixed frequency.
+    #     last_sent_msg_ts = time.time()
 
-        # Initialize the environment state action tuple.
+    #     # Initialize the environment state action tuple.
 
     # Rostopic callback functions
    
     # State information functions
+    def _get_pose_aa_mm(self):
+        pose = list(self.robot.get_tool_pose()) # [x, y, z, rx, ry, rz] (m, rad)
+        pose_mm = pose[:]
+        pose_mm[:3] = [p * SCALE_FACTOR for p in pose[:3]]  # m -> mm
+        return pose_mm
+    
     def get_arm_cartesian_state(self):
-        pass
+        pose = self._get_pose_aa_mm()
+        cartesian_state = dict(
+            position = np.array(pose[0:3], dtype=np.float32).flatten(),
+            orientation = np.array(pose[3:], dtype=np.float32).flatten(),
+            timestamp = time.time()
+        )
+        return cartesian_state
    
     def get_arm_pose(self):
-        status, home_pose = self.robot.get_position_aa()
-        home_affine = self.robot_pose_aa_to_affine(home_pose)
+        pose = np.array(self._get_pose_aa_mm(), dtype=np.float32)
+        home_affine = self.robot_pose_aa_to_affine(pose)
         return home_affine
 
     def get_arm_position(self):
-        joint_state =np.array(self.robot.get_servo_angle()[1])
-        return joint_state
+        q = self.robot.get_joint_values()
+        return np.array(q, dtype=np.float32)
     
     def get_arm_osc_position(self):
-        pass
+        pose = self._get_pose_aa_mm()
+        return np.array(pose, dtype=np.float32)
 
     def get_arm_velocity(self):
         raise ValueError('get_arm_velocity() is being called - Arm Velocity cannot be collected in UR arms, this method should not be called')
@@ -157,11 +247,11 @@ class DexArmControl():
         raise ValueError('get_arm_torque() is being called - Arm Torques cannot be collected in UR arms, this method should not be called')
 
     def get_arm_cartesian_coords(self):
-        status, home_pose = self.robot.get_position_aa()
-        return home_pose
+        return self._get_pose_aa_mm()
 
     def get_gripper_state(self):
-        gripper_position=self.robot.get_gripper_position()
+        # gripper_position=self.robot.get_gripper_position()
+        gripper_position=[0, [0,0,0]]  # Dummy values
         gripper_pose= dict(
             position = np.array(gripper_position[1], dtype=np.float32).flatten(),
             timestamp = time.time()
@@ -169,52 +259,76 @@ class DexArmControl():
         return gripper_pose
 
     def move_arm_joint(self, joint_angles):
-        self.robot.set_servo_angle(joint_angles, wait=True, is_radian=True, mvacc=80, speed=10)
+        self.robot.servo_joint(
+            joint_values=list(joint_angles),
+            speed=0.0, # TODO: tune speed and acceleration
+            acceleration=0.0,
+            time=0.008,
+            lookahead_time=0.1,
+            gain=300
+        )
 
     def move_arm_cartesian(self, cartesian_pos, duration=3):
-        self.robot.set_servo_cartesian_aa(
-                    cartesian_pos, wait=False, relative=False, mvacc=200, speed=50)
+        pose = list(cartesian_pos)  # [x, y, z, rx, ry, rz] (mm, rad)
+        pose[:3] = [p / SCALE_FACTOR for p in pose[:3]]  # mm -> m
+        self.robot.move_tool(
+            pose=pose,
+            speed=0.1,  # TODO: tune speed and acceleration
+            acceleration=0.1,
+            asynchronous=False
+        )
 
     def arm_control(self, cartesian_pose):
-        if self.robot.has_error:
-            self.robot.clear()
-            self.robot.set_mode_and_state(1)
-        self.robot.set_servo_cartesian_aa(
-                    cartesian_pose, wait=False, relative=False, mvacc=200, speed=50)
+        pose = list(cartesian_pose)  # [x, y, z, rx, ry, rz] (mm, rad)
+        pose[:3] = [p / SCALE_FACTOR for p in pose[:3]]  # mm -> m
+        
+        self.robot.servo_tool(
+            pose=pose,
+            speed=0.1,  # TODO: tune speed and acceleration
+            acceleration=0.1,
+            time=0.008,
+            lookahead_time=0.1,
+            gain=300
+        )
         
     def get_arm_joint_state(self):
-        joint_positions =np.array(self.robot.get_servo_angle()[1])
+        q = self.robot.get_joint_values()
         joint_state = dict(
-            position = np.array(joint_positions, dtype=np.float32),
-            timestamp = time.time()
+            position=np.array(q, dtype=np.float32),
+            timestamp=time.time()
         )
         return joint_state
         
     def get_cartesian_state(self):
-        status,current_pos=self.robot.get_position_aa() 
-        cartesian_state = dict(
-            position = np.array(current_pos[0:3], dtype=np.float32).flatten(),
-            orientation = np.array(current_pos[3:], dtype=np.float32).flatten(),
-            timestamp = time.time()
-        )
-
-        return cartesian_state
+        return self.get_arm_cartesian_state()
+    
+    def get_joint_velocity(self):
+        qd = self.robot.get_joint_speed()
+        return np.array(qd, dtype=np.float32)
+    
+    def get_joint_torque(self):
+        raise NotImplementedError("Joint torque not implemented for UR arms.")
 
     def home_arm(self):
-        self.move_arm_cartesian(BIMANUAL_RIGHT_HOME, duration=5)
+        self.robot.move_joint(
+            joint_values=UR_HOME,
+            speed=0.1,
+            acceleration=0.1,
+            asynchronous=False
+        )
 
     def reset_arm(self):
         self.home_arm()
 
     # Full robot commands
     def move_robot(self,arm_angles):
-        self.robot.set_servo_angle(angle=arm_angles,is_radian=True)
+        self.move_arm_joint(arm_angles)
         
     def home_robot(self):
         self.home_arm() # For now we're using cartesian values
-
+        
     def set_gripper_status(self, position):
-        self.robot.set_gripper_position(position)
+        pass
 
     def robot_pose_aa_to_affine(self,pose_aa: np.ndarray) -> np.ndarray:
         """Converts a robot pose in axis-angle format to an affine matrix.

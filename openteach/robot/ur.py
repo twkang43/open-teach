@@ -26,10 +26,10 @@ class URArm(RobotWrapper):
         return self._controller.get_arm_joint_state()
     
     def get_joint_velocity(self):
-        pass
+        return self._controller.get_arm_velocity()
 
     def get_joint_torque(self):
-        pass
+        return self._controller.get_arm_torque()
 
     def get_cartesian_state(self):
         return self._controller.get_arm_cartesian_state()
