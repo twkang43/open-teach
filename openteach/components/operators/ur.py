@@ -67,28 +67,28 @@ class URArmOperator(Operator):
             host=host,
             port=gripper_port
         )
-        # Cartesian Publisher
-        self.cartesian_publisher = ZMQKeypointPublisher(
-            host=host,
-            port=cartesian_publisher_port
-        )
-        # Joint Publisher
-        self.joint_publisher = ZMQKeypointPublisher(
-            host=host,
-            port=joint_publisher_port
-        )
-        # Cartesian Command Publisher
-        self.cartesian_command_publisher = ZMQKeypointPublisher(
-            host=host,
-            port=cartesian_command_publisher_port
-        )
+        # # Cartesian Publisher
+        # self.cartesian_publisher = ZMQKeypointPublisher(
+        #     host=host,
+        #     port=cartesian_publisher_port
+        # )
+        # # Joint Publisher
+        # self.joint_publisher = ZMQKeypointPublisher(
+        #     host=host,
+        #     port=joint_publisher_port
+        # )
+        # # Cartesian Command Publisher
+        # self.cartesian_command_publisher = ZMQKeypointPublisher(
+        #     host=host,
+        #     port=cartesian_command_publisher_port
+        # )
         # Arm Resolution Subscriber
         self._arm_resolution_subscriber = ZMQKeypointSubscriber(
             host= host,
             port= arm_resolution_port,
             topic = 'button'
         )
-        # Define Robot object
+        # Define Robot object - should get IP from config
         self._robot = URArm(ip=UR_IP)
         self._robot.home()
        
@@ -142,6 +142,7 @@ class URArmOperator(Operator):
             np.ndarray: 4x4 affine matrix [[R, t],[0, 1]]
         """
 
+        # TODO: Verify SCALE_FACTOR is appropriate for UR robot coordinate system
         rotation = R.from_rotvec(pose_aa[3:]).as_matrix()
         translation = np.array(pose_aa[:3]) / SCALE_FACTOR
 
@@ -238,8 +239,10 @@ class URArmOperator(Operator):
 
     # Function to get gripper state from hand keypoints
     def get_gripper_state_from_hand_keypoints(self):
+        # TODO: Calibrate finger distance threshold for UR gripper control sensitivity
         transformed_hand_coords= self._transformed_hand_keypoint_subscriber.recv_keypoints()
         distance = np.linalg.norm(transformed_hand_coords[OCULUS_JOINTS['pinky'][-1]]- transformed_hand_coords[OCULUS_JOINTS['thumb'][-1]])
+        # TODO: Tune threshold value based on UR gripper specifications and user preference
         thresh = 0.03
         gripper_fl =False
         if distance < thresh:
@@ -261,6 +264,7 @@ class URArmOperator(Operator):
         transformed_hand_coords= self._transformed_hand_keypoint_subscriber.recv_keypoints()
         ring_distance = np.linalg.norm(transformed_hand_coords[OCULUS_JOINTS['ring'][-1]]- transformed_hand_coords[OCULUS_JOINTS['thumb'][-1]])
         middle_distance = np.linalg.norm(transformed_hand_coords[OCULUS_JOINTS['middle'][-1]]- transformed_hand_coords[OCULUS_JOINTS['thumb'][-1]])
+        # TODO: Tune pause gesture threshold for UR robot safety and usability
         thresh = 0.03 
         pause_right= True
         if ring_distance < thresh  or middle_distance < thresh:
@@ -289,8 +293,10 @@ class URArmOperator(Operator):
         arm_teleoperation_scale_mode = self._get_resolution_scale_mode()
 
         if arm_teleoperation_scale_mode == ARM_HIGH_RESOLUTION:
+            # TODO: Tune resolution scales for optimal UR robot control precision
             self.resolution_scale = 1
         elif arm_teleoperation_scale_mode == ARM_LOW_RESOLUTION:
+            # TODO: Adjust low resolution scale based on UR workspace and safety requirements
             self.resolution_scale = 0.6
 
 
@@ -306,12 +312,14 @@ class URArmOperator(Operator):
        
         H_HT_HI = np.linalg.pinv(H_HI_HH) @ H_HT_HH # Homo matrix that takes P_HT to P_HI
 
+        # TODO: Tune VR-to-UR coordinate transformation matrices based on actual UR setup
         # Here there are two matrices because the rotation is asymmetric and we imagine we are holding the endeffector and moving the robot.
         H_R_V= np.array([[0 , 0, -1, 0], 
                         [0 , -1, 0, 0],
                         [-1, 0, 0, 0],
                         [0, 0 ,0 , 1]])
 
+        # TODO: Verify translation mapping matches UR robot base and tool coordinate systems
         # The translation is completely symmetric and mimics your hand movement and we imagine we are holding the endeffector and moving the robot.
         H_T_V = np.array([[0, 0 ,1, 0],
                          [0 ,1, 0, 0],
@@ -331,6 +339,7 @@ class URArmOperator(Operator):
 
         self.robot_moving_H = copy(H_RT_RH)
         final_pose = self._get_scaled_cart_pose(self.robot_moving_H)
+        # TODO: Verify unit conversion - UR expects mm, confirm this matches UR SDK requirements
         final_pose[0:3]=final_pose[0:3]*1000
 
         # Apply the filter
@@ -340,15 +349,39 @@ class URArmOperator(Operator):
         gripper_state,status_change, gripper_flag =self.get_gripper_state_from_hand_keypoints()
         if gripper_flag ==1 and status_change is True:
             self.gripper_correct_state=gripper_state
-            self.robot.set_gripper_state(self.gripper_correct_state*800)
+            # TODO: Implement UR-specific gripper control for attached gripper (Robotiq, OnRobot, etc.)
+            # TODO: Replace XArm-specific gripper command with UR-compatible gripper control
+            # self.robot.set_gripper_state(self.gripper_correct_state*800)  # XArm specific - needs UR adaptation
         
-        # We save the states here during teleoperation as saving directly at 90Hz seems to be too fast for XArm.
+        # TODO: Optimize control frequency for UR robot specifications (currently using VR_FREQ)
+        # We save the states here during teleoperation 
+        # Note: Frequency may need adjustment for UR robot specifications
         self.gripper_publisher.pub_keypoints(self.gripper_correct_state,"gripper_right")
-        position=self.robot.get_cartesian_position()
-        joint_position= self.robot.get_joint_position()
-        self.cartesian_publisher.pub_keypoints(position,"cartesian")
-        self.joint_publisher.pub_keypoints(joint_position,"joint")
-        self.cartesian_command_publisher.pub_keypoints(final_pose, "cartesian")
+        # position=self.robot.get_cartesian_position()
+        # joint_position= self.robot.get_joint_position()
+        # self.cartesian_publisher.pub_keypoints(position,"cartesian")
+        # self.joint_publisher.pub_keypoints(joint_position,"joint")
+        # self.cartesian_command_publisher.pub_keypoints(final_pose, "cartesian")
         
         if self.arm_teleop_state == ARM_TELEOP_CONT and gripper_flag == False:
             self.robot.arm_control(final_pose)
+            
+    def stream(self):
+        self.notify_component_start('{} control'.format(self.robot.name))
+        print("Start controlling the robot hand using the Oculus Headset.\n")
+
+        # Assume that the initial position is considered initial after 3 seconds of the start
+        while True:
+            try:
+                if self.robot.get_joint_position() is not None:
+                    self.timer.start_loop()
+
+                    # Retargeting function
+                    self._apply_retargeted_angles(log=False)
+
+                    self.timer.end_loop()
+            except KeyboardInterrupt:
+                break
+
+        self.transformed_arm_keypoint_subscriber.stop()
+        print('Stopping the teleoperator!')
