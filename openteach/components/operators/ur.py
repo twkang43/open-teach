@@ -144,10 +144,8 @@ class URArmOperator(Operator):
         Returns:
             np.ndarray: 4x4 affine matrix [[R, t],[0, 1]]
         """
-
-        # TODO: Verify SCALE_FACTOR is appropriate for UR robot coordinate system
         rotation = R.from_rotvec(pose_aa[3:]).as_matrix()
-        translation = np.array(pose_aa[:3]) / SCALE_FACTOR
+        translation = np.array(pose_aa[:3])
 
         return np.block([[rotation, translation[:, np.newaxis]],[0, 0, 0, 1]])
     
@@ -242,10 +240,8 @@ class URArmOperator(Operator):
 
     # Function to get gripper state from hand keypoints
     def get_gripper_state_from_hand_keypoints(self):
-        # TODO: Calibrate finger distance threshold for UR gripper control sensitivity
         transformed_hand_coords= self._transformed_hand_keypoint_subscriber.recv_keypoints()
         distance = np.linalg.norm(transformed_hand_coords[OCULUS_JOINTS['pinky'][-1]]- transformed_hand_coords[OCULUS_JOINTS['thumb'][-1]])
-        # TODO: Tune threshold value based on UR gripper specifications and user preference
         thresh = 0.03
         gripper_fl =False
         if distance < thresh:
@@ -267,7 +263,6 @@ class URArmOperator(Operator):
         transformed_hand_coords= self._transformed_hand_keypoint_subscriber.recv_keypoints()
         ring_distance = np.linalg.norm(transformed_hand_coords[OCULUS_JOINTS['ring'][-1]]- transformed_hand_coords[OCULUS_JOINTS['thumb'][-1]])
         middle_distance = np.linalg.norm(transformed_hand_coords[OCULUS_JOINTS['middle'][-1]]- transformed_hand_coords[OCULUS_JOINTS['thumb'][-1]])
-        # TODO: Tune pause gesture threshold for UR robot safety and usability
         thresh = 0.03 
         pause_right= True
         if ring_distance < thresh  or middle_distance < thresh:
@@ -297,11 +292,10 @@ class URArmOperator(Operator):
 
         if arm_teleoperation_scale_mode == ARM_HIGH_RESOLUTION:
             # TODO: Tune resolution scales for optimal UR robot control precision
-            self.resolution_scale = 0.001  # Reduced from 1 for safer speed
+            self.resolution_scale = 0.1  # Reduced from 1 for safer speed
         elif arm_teleoperation_scale_mode == ARM_LOW_RESOLUTION:
             # TODO: Adjust low resolution scale based on UR workspace and safety requirements
-            self.resolution_scale = 0.0005  # Reduced from 0.6 for safer speed
-
+            self.resolution_scale = 0.06  # Reduced from 0.6 for safer speed
 
         if moving_hand_frame is None: 
             return # It means we are not on the arm mode yet instead of blocking it is directly returning
@@ -315,7 +309,6 @@ class URArmOperator(Operator):
        
         H_HT_HI = np.linalg.pinv(H_HI_HH) @ H_HT_HH # Homo matrix that takes P_HT to P_HI
 
-        # TODO: Tune VR-to-UR coordinate transformation matrices based on actual UR setup
         # Here there are two matrices because the rotation is asymmetric and we imagine we are holding the endeffector and moving the robot.
         H_R_V = np.array([
             [1, 0, 0, 0],
@@ -324,12 +317,13 @@ class URArmOperator(Operator):
             [0, 0, 0, 1]
         ])
 
-        # TODO: Verify translation mapping matches UR robot base and tool coordinate systems
         # The translation is completely symmetric and mimics your hand movement and we imagine we are holding the endeffector and moving the robot.
-        H_T_V = np.array([[0, 0 ,1, 0],
-						 [0 ,1, 0, 0],
-						 [-1, 0, 0, 0],
-						[0, 0, 0, 1]])
+        H_T_V = np.array([
+            [1, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1]
+        ])
 
         H_HT_HI_r=(pinv(H_R_V) @ H_HT_HI @ H_R_V)[:3,:3] # Finding th
         H_HT_HI_t=(pinv(H_T_V) @ H_HT_HI @ H_T_V)[:3,3]
@@ -344,8 +338,6 @@ class URArmOperator(Operator):
 
         self.robot_moving_H = copy(H_RT_RH)
         final_pose = self._get_scaled_cart_pose(self.robot_moving_H)
-        
-        print("Final Pose to send to UR: ", final_pose)
 
         # Apply the filter
         if self.use_filter:
@@ -356,7 +348,7 @@ class URArmOperator(Operator):
             self.gripper_correct_state=gripper_state
             # TODO: Implement UR-specific gripper control for attached gripper (Robotiq, OnRobot, etc.)
             # TODO: Replace XArm-specific gripper command with UR-compatible gripper control
-            # self.robot.set_gripper_state(self.gripper_correct_state*800)  # XArm specific - needs UR adaptation
+            # self.robot.set_gripper_state(self.gripper_correct_state)  # XArm specific - needs UR adaptation
         
         # TODO: Optimize control frequency for UR robot specifications (currently using VR_FREQ)
         # We save the states here during teleoperation 

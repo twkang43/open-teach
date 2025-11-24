@@ -61,3 +61,6 @@ class URArm(RobotWrapper):
 
     def move_velocity(self, input_velocity_values, duration):
         pass
+    
+    def set_gripper_state(self, open):
+        self._controller.set_gripper_state(open)

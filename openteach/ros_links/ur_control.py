@@ -7,6 +7,8 @@ import math
 
 import rtde_control
 import rtde_receive
+from .robotiq import robotiq_gripper_control as rgc
+from .robotiq import robotiq_gripper
 from typing import List
 
 from openteach.constants import SCALE_FACTOR
@@ -25,6 +27,10 @@ class RTDE:
     def __init__(self, robot_ip: str = "192.168.1.102"):
         self.rtde_c = rtde_control.RTDEControlInterface(robot_ip)
         self.rtde_r = rtde_receive.RTDEReceiveInterface(robot_ip)
+        
+        self.gripper = robotiq_gripper.RobotiqGripper()
+        self.gripper.connect(robot_ip, 63352)
+        self.gripper.activate()
 
     def get_joint_values(self) -> List[float]:
         """Get the joint positions in radians."""
@@ -215,7 +221,7 @@ class DexArmControl():
     def _get_pose_aa_mm(self):
         pose = list(self.robot.get_tool_pose()) # [x, y, z, rx, ry, rz] (m, rad)
         pose_mm = pose[:]
-        pose_mm[:3] = [p * SCALE_FACTOR for p in pose[:3]]  # m -> mm
+        # pose_mm[:3] = [p * SCALE_FACTOR for p in pose[:3]]  # m -> mm
         return pose_mm
     
     def get_arm_cartesian_state(self):
@@ -250,8 +256,8 @@ class DexArmControl():
         return self._get_pose_aa_mm()
 
     def get_gripper_state(self):
-        # gripper_position=self.robot.get_gripper_position()
-        gripper_position=[0, [0,0,0]]  # Dummy values
+        gripper_position=self.robot.gripper.get_current_position()
+        gripper_position=[gripper_position, [0,0,0]]  # Dummy values
         gripper_pose= dict(
             position = np.array(gripper_position[1], dtype=np.float32).flatten(),
             timestamp = time.time()
@@ -270,25 +276,25 @@ class DexArmControl():
 
     def move_arm_cartesian(self, cartesian_pos, duration=3):
         pose = list(cartesian_pos)  # [x, y, z, rx, ry, rz] (mm, rad)
-        pose[:3] = [p / SCALE_FACTOR for p in pose[:3]]  # mm -> m
+        # pose[:3] = [p / SCALE_FACTOR for p in pose[:3]]  # mm -> m
         self.robot.move_tool(
             pose=pose,
-            speed=0.0,  # TODO: tune speed and acceleration
-            acceleration=0.1,
+            speed=0.0,  # 0 = use default
+            acceleration=0.0,  # 0 = use default
             asynchronous=False
         )
 
     def arm_control(self, cartesian_pose):
         pose = list(cartesian_pose)  # [x, y, z, rx, ry, rz] (mm, rad)
-        pose[:3] = [p / SCALE_FACTOR for p in pose[:3]]  # mm -> m
+        # pose[:3] = [p / SCALE_FACTOR for p in pose[:3]]  # mm -> m
         
         self.robot.servo_tool(
             pose=pose,
-            speed=0.0,  # TODO: tune speed and acceleration
-            acceleration=0.1,
+            speed=0.0,  # 0 = use default
+            acceleration=0.0,  # 0 = use default
             time=0.008,
-            lookahead_time=0.1,
-            gain=300
+            lookahead_time=0.2,  # Increased for smoother movement
+            gain=100  # Reduced for less aggressive tracking
         )
         
     def get_arm_joint_state(self):
@@ -312,8 +318,8 @@ class DexArmControl():
     def home_arm(self):
         self.robot.move_joint(
             joint_values=UR_HOME,
-            speed=0.1,
-            acceleration=0.1,
+            speed=0.0,  # 0 = use default
+            acceleration=0.0,  # 0 = use default
             asynchronous=False
         )
 
@@ -327,9 +333,13 @@ class DexArmControl():
     def home_robot(self):
         self.home_arm() # For now we're using cartesian values
         
-    def set_gripper_status(self, position):
-        pass
-
+    def set_gripper_state(self, open):
+        goal = self.robot.gripper.get_max_position() if open else self.robot.gripper.get_min_position()
+        speed = (self.robot.gripper.get_min_speed() + self.robot.gripper.get_max_speed()) / 2
+        force = (self.robot.gripper.get_min_force() + self.robot.gripper.get_max_force()) / 2
+        
+        self.robot.gripper.move_and_wait_for_pos(position=goal, speed=speed, force=force)
+            
     def robot_pose_aa_to_affine(self,pose_aa: np.ndarray) -> np.ndarray:
         """Converts a robot pose in axis-angle format to an affine matrix.
         Args:
@@ -340,7 +350,8 @@ class DexArmControl():
         """
 
         rotation = R.from_rotvec(pose_aa[3:]).as_matrix()
-        translation = np.array(pose_aa[:3]) / SCALE_FACTOR
+        # translation = np.array(pose_aa[:3]) / SCALE_FACTOR
+        translation = np.array(pose_aa[:3])  # --- IGNORE ---
 
         return np.block([[rotation, translation[:, np.newaxis]],
                         [0, 0, 0, 1]])
