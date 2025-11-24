@@ -11,7 +11,6 @@ from .robotiq import robotiq_gripper_control as rgc
 from .robotiq import robotiq_gripper
 from typing import List
 
-from openteach.constants import SCALE_FACTOR
 from scipy.spatial.transform import Rotation as R
 from openteach.constants import *
 
@@ -218,14 +217,11 @@ class DexArmControl():
     # Rostopic callback functions
    
     # State information functions
-    def _get_pose_aa_mm(self):
-        pose = list(self.robot.get_tool_pose()) # [x, y, z, rx, ry, rz] (m, rad)
-        pose_mm = pose[:]
-        # pose_mm[:3] = [p * SCALE_FACTOR for p in pose[:3]]  # m -> mm
-        return pose_mm
+    def _get_pose(self):
+        return list(self.robot.get_tool_pose()) # [x, y, z, rx, ry, rz] (m, rad)
     
     def get_arm_cartesian_state(self):
-        pose = self._get_pose_aa_mm()
+        pose = self._get_pose()
         cartesian_state = dict(
             position = np.array(pose[0:3], dtype=np.float32).flatten(),
             orientation = np.array(pose[3:], dtype=np.float32).flatten(),
@@ -234,7 +230,7 @@ class DexArmControl():
         return cartesian_state
    
     def get_arm_pose(self):
-        pose = np.array(self._get_pose_aa_mm(), dtype=np.float32)
+        pose = np.array(self._get_pose(), dtype=np.float32)
         home_affine = self.robot_pose_aa_to_affine(pose)
         return home_affine
 
@@ -243,7 +239,7 @@ class DexArmControl():
         return np.array(q, dtype=np.float32)
     
     def get_arm_osc_position(self):
-        pose = self._get_pose_aa_mm()
+        pose = self._get_pose()
         return np.array(pose, dtype=np.float32)
 
     def get_arm_velocity(self):
@@ -253,7 +249,7 @@ class DexArmControl():
         raise ValueError('get_arm_torque() is being called - Arm Torques cannot be collected in UR arms, this method should not be called')
 
     def get_arm_cartesian_coords(self):
-        return self._get_pose_aa_mm()
+        return self._get_pose()
 
     def get_gripper_state(self):
         gripper_position=self.robot.gripper.get_current_position()
