@@ -68,21 +68,6 @@ class URArmOperator(Operator):
             host=host,
             port=gripper_port
         )
-        # # Cartesian Publisher
-        # self.cartesian_publisher = ZMQKeypointPublisher(
-        #     host=host,
-        #     port=cartesian_publisher_port
-        # )
-        # # Joint Publisher
-        # self.joint_publisher = ZMQKeypointPublisher(
-        #     host=host,
-        #     port=joint_publisher_port
-        # )
-        # # Cartesian Command Publisher
-        # self.cartesian_command_publisher = ZMQKeypointPublisher(
-        #     host=host,
-        #     port=cartesian_command_publisher_port
-        # )
         # Arm Resolution Subscriber
         self._arm_resolution_subscriber = ZMQKeypointSubscriber(
             host= host,
@@ -241,7 +226,7 @@ class URArmOperator(Operator):
     # Function to get gripper state from hand keypoints
     def get_gripper_state_from_hand_keypoints(self):
         transformed_hand_coords= self._transformed_hand_keypoint_subscriber.recv_keypoints()
-        distance = np.linalg.norm(transformed_hand_coords[OCULUS_JOINTS['pinky'][-1]]- transformed_hand_coords[OCULUS_JOINTS['thumb'][-1]])
+        distance = np.linalg.norm(transformed_hand_coords[OCULUS_JOINTS['middle'][-1]]- transformed_hand_coords[OCULUS_JOINTS['thumb'][-1]])
         thresh = 0.03
         gripper_fl =False
         if distance < thresh:
@@ -346,9 +331,7 @@ class URArmOperator(Operator):
         gripper_state,status_change, gripper_flag =self.get_gripper_state_from_hand_keypoints()
         if gripper_flag ==1 and status_change is True:
             self.gripper_correct_state=gripper_state
-            # TODO: Implement UR-specific gripper control for attached gripper (Robotiq, OnRobot, etc.)
-            # TODO: Replace XArm-specific gripper command with UR-compatible gripper control
-            # self.robot.set_gripper_state(self.gripper_correct_state)  # XArm specific - needs UR adaptation
+            self.robot.set_gripper_state(self.gripper_correct_state)
         
         # TODO: Optimize control frequency for UR robot specifications (currently using VR_FREQ)
         # We save the states here during teleoperation 

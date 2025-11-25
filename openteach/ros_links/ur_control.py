@@ -7,7 +7,6 @@ import math
 
 import rtde_control
 import rtde_receive
-from .robotiq import robotiq_gripper_control as rgc
 from .robotiq import robotiq_gripper
 from typing import List
 
@@ -199,22 +198,7 @@ class RTDE:
 
 class DexArmControl():
     def __init__(self, ip, record_type=None):
-        #self._init_ur_arm_control(record)
         self.robot = RTDE(robot_ip=ip) 
-
-    # Controller initializers
-    # def _init_ur_control(self):
-    #     self.robot.reset()
-        
-    #     status, home_pose = self.robot.get_position_aa()
-    #     assert status == 0, "Failed to get robot position"
-    #     home_affine = self.robot_pose_aa_to_affine(home_pose)
-    #     # Initialize timestamp; used to send messages to the robot at a fixed frequency.
-    #     last_sent_msg_ts = time.time()
-
-    #     # Initialize the environment state action tuple.
-
-    # Rostopic callback functions
    
     # State information functions
     def _get_pose(self):
@@ -252,13 +236,13 @@ class DexArmControl():
         return self._get_pose()
 
     def get_gripper_state(self):
-        gripper_position=self.robot.gripper.get_current_position()
-        gripper_position=[gripper_position, [0,0,0]]  # Dummy values
-        gripper_pose= dict(
-            position = np.array(gripper_position[1], dtype=np.float32).flatten(),
-            timestamp = time.time()
-        )
-        return gripper_pose
+        return self.robot.gripper.get_current_position()
+        # gripper_position=[gripper_position, [0,0,0]]  # Dummy values
+        # gripper_pose= dict(
+        #     position = np.array(gripper_position[1], dtype=np.float32).flatten(),
+        #     timestamp = time.time()
+        # )
+        # return gripper_pose
 
     def move_arm_joint(self, joint_angles):
         self.robot.servo_joint(
@@ -271,8 +255,7 @@ class DexArmControl():
         )
 
     def move_arm_cartesian(self, cartesian_pos, duration=3):
-        pose = list(cartesian_pos)  # [x, y, z, rx, ry, rz] (mm, rad)
-        # pose[:3] = [p / SCALE_FACTOR for p in pose[:3]]  # mm -> m
+        pose = list(cartesian_pos)  # [x, y, z, rx, ry, rz] (m, rad)
         self.robot.move_tool(
             pose=pose,
             speed=0.0,  # 0 = use default
@@ -281,8 +264,7 @@ class DexArmControl():
         )
 
     def arm_control(self, cartesian_pose):
-        pose = list(cartesian_pose)  # [x, y, z, rx, ry, rz] (mm, rad)
-        # pose[:3] = [p / SCALE_FACTOR for p in pose[:3]]  # mm -> m
+        pose = list(cartesian_pose)  # [x, y, z, rx, ry, rz] (m, rad)
         
         self.robot.servo_tool(
             pose=pose,
@@ -330,11 +312,8 @@ class DexArmControl():
         self.home_arm() # For now we're using cartesian values
         
     def set_gripper_state(self, open):
-        goal = self.robot.gripper.get_max_position() if open else self.robot.gripper.get_min_position()
-        speed = (self.robot.gripper.get_min_speed() + self.robot.gripper.get_max_speed()) / 2
-        force = (self.robot.gripper.get_min_force() + self.robot.gripper.get_max_force()) / 2
-        
-        self.robot.gripper.move_and_wait_for_pos(position=goal, speed=speed, force=force)
+        goal = self.robot.gripper.get_open_position() if open else self.robot.gripper.get_closed_position()
+        self.robot.gripper.move_and_wait_for_pos(position=goal, speed=64, force=1)
             
     def robot_pose_aa_to_affine(self,pose_aa: np.ndarray) -> np.ndarray:
         """Converts a robot pose in axis-angle format to an affine matrix.
@@ -346,8 +325,7 @@ class DexArmControl():
         """
 
         rotation = R.from_rotvec(pose_aa[3:]).as_matrix()
-        # translation = np.array(pose_aa[:3]) / SCALE_FACTOR
-        translation = np.array(pose_aa[:3])  # --- IGNORE ---
+        translation = np.array(pose_aa[:3])
 
         return np.block([[rotation, translation[:, np.newaxis]],
                         [0, 0, 0, 1]])

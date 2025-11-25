@@ -10,7 +10,8 @@ class URArm(RobotWrapper):
     def recorder_functions(self):
         return {
             'joint_states': self.get_joint_state,
-            'cartesian_states': self.get_cartesian_state
+            'cartesian_states': self.get_cartesian_state,
+            'gripper_state': self.get_gripper_state
         }
 
     @property
@@ -45,6 +46,9 @@ class URArm(RobotWrapper):
     
     def get_pose(self):
         return self._controller.get_arm_pose()
+    
+    def get_gripper_state(self):
+        return self._controller.get_gripper_state()
 
     # Movement functions
     def home(self):
