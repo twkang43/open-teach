@@ -296,8 +296,8 @@ class DexArmControl():
     def home_arm(self):
         self.robot.move_joint(
             joint_values=UR_HOME,
-            speed=0.0,  # 0 = use default
-            acceleration=0.0,  # 0 = use default
+            speed=0.3,  # 0 = use default
+            acceleration=0.3,  # 0 = use default
             asynchronous=False
         )
 

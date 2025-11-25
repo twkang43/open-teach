@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import zmq
+import time
 
 from mpl_toolkits.mplot3d import Axes3D
 from tqdm import tqdm
@@ -76,7 +77,8 @@ class URArmOperator(Operator):
         )
         # Define Robot object - should get IP from config
         self._robot = URArm(ip=UR_IP)
-        # self._robot.home()
+        self._robot.home()
+        time.sleep(5)
        
         
         # Get the initial pose of the robot
@@ -250,7 +252,7 @@ class URArmOperator(Operator):
         middle_distance = np.linalg.norm(transformed_hand_coords[OCULUS_JOINTS['middle'][-1]]- transformed_hand_coords[OCULUS_JOINTS['thumb'][-1]])
         thresh = 0.03 
         pause_right= True
-        if ring_distance < thresh  or middle_distance < thresh:
+        if ring_distance < thresh:
             self.pause_cnt+=1
             if self.pause_cnt==1:
                 self.prev_pause_flag=self.pause_flag
@@ -297,7 +299,7 @@ class URArmOperator(Operator):
         # Here there are two matrices because the rotation is asymmetric and we imagine we are holding the endeffector and moving the robot.
         H_R_V = np.array([
             [1, 0, 0, 0],
-            [0, 0, 1, 0],
+            [0, 0, -1, 0],
             [0, 1, 0, 0],
             [0, 0, 0, 1]
         ])
