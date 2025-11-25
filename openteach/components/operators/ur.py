@@ -277,10 +277,10 @@ class URArmOperator(Operator):
 
         if arm_teleoperation_scale_mode == ARM_HIGH_RESOLUTION:
             # TODO: Tune resolution scales for optimal UR robot control precision
-            self.resolution_scale = 0.1  # Reduced from 1 for safer speed
+            self.resolution_scale = 1  # Reduced from 1 for safer speed
         elif arm_teleoperation_scale_mode == ARM_LOW_RESOLUTION:
             # TODO: Adjust low resolution scale based on UR workspace and safety requirements
-            self.resolution_scale = 0.06  # Reduced from 0.6 for safer speed
+            self.resolution_scale = 0.3  # Reduced from 0.6 for safer speed
 
         if moving_hand_frame is None: 
             return # It means we are not on the arm mode yet instead of blocking it is directly returning
@@ -304,9 +304,9 @@ class URArmOperator(Operator):
 
         # The translation is completely symmetric and mimics your hand movement and we imagine we are holding the endeffector and moving the robot.
         H_T_V = np.array([
-            [1, 0, 0, 0],
-            [0, 0, 1, 0],
             [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [1, 0, 0, 0],
             [0, 0, 0, 1]
         ])
 
