@@ -76,7 +76,7 @@ class URArmOperator(Operator):
             topic = 'button'
         )
         # Define Robot object - should get IP from config
-        self._robot = URArm(ip=UR_IP)
+        self._robot = URArm(ip=UR_IP, control=True)
         self._robot.home()
         time.sleep(5)
        

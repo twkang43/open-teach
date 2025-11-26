@@ -2,8 +2,8 @@ from openteach.ros_links.ur_control import DexArmControl
 from .robot import RobotWrapper
 
 class URArm(RobotWrapper):
-    def __init__(self, ip, record_type=None):
-        self._controller = DexArmControl(ip=ip, record_type=record_type)
+    def __init__(self, ip, control, record_type=None):
+        self._controller = DexArmControl(ip=ip, control=control, record_type=record_type)
         self._data_frequency = 50
 
     @property

@@ -22,13 +22,15 @@ Codes from UR RTDE interface
 https://github.com/elpis-lab/UR10_RTDE/blob/60dd19a782e61596a23aa0b1e8bb4a3036abea83/rtde/rtde.py
 """
 class RTDE:
-    def __init__(self, robot_ip: str = "192.168.1.102"):
-        self.rtde_c = rtde_control.RTDEControlInterface(robot_ip)
+    def __init__(self, robot_ip: str = "192.168.1.102", control: bool = False):
         self.rtde_r = rtde_receive.RTDEReceiveInterface(robot_ip)
-        
         self.gripper = robotiq_gripper.RobotiqGripper()
         self.gripper.connect(robot_ip, 63352)
-        self.gripper.activate()
+        
+        if control:
+            print("Activating UR RTDE Control Interface")
+            self.rtde_c = rtde_control.RTDEControlInterface(robot_ip)
+            self.gripper.activate()
 
     def get_joint_values(self) -> List[float]:
         """Get the joint positions in radians."""
@@ -197,8 +199,8 @@ class RTDE:
 
 
 class DexArmControl():
-    def __init__(self, ip, record_type=None):
-        self.robot = RTDE(robot_ip=ip) 
+    def __init__(self, ip, control,record_type=None):
+        self.robot = RTDE(robot_ip=ip, control=control) 
    
     # State information functions
     def _get_pose(self):
@@ -236,13 +238,24 @@ class DexArmControl():
         return self._get_pose()
 
     def get_gripper_state(self):
-        return self.robot.gripper.get_current_position()
-        # gripper_position=[gripper_position, [0,0,0]]  # Dummy values
-        # gripper_pose= dict(
-        #     position = np.array(gripper_position[1], dtype=np.float32).flatten(),
-        #     timestamp = time.time()
-        # )
-        # return gripper_pose
+        gripper_position = self.robot.gripper.get_current_position()
+        is_open = self.robot.gripper.is_open()
+        is_closed = self.robot.gripper.is_closed()
+        object_status = self.robot.gripper._get_var(self.robot.gripper.OBJ)
+        
+        # Normalized position (0.0 = fully open, 1.0 = fully closed)
+        min_pos = self.robot.gripper.get_min_position()
+        max_pos = self.robot.gripper.get_max_position()
+        normalized_position = (gripper_position - min_pos) / (max_pos - min_pos) if max_pos > min_pos else 0.0
+        
+        gripper_state = dict(
+            normalized_position = np.array([normalized_position], dtype=np.float32),
+            is_open = np.array([1.0 if is_open else 0.0], dtype=np.float32),
+            is_closed = np.array([1.0 if is_closed else 0.0], dtype=np.float32),
+            object_detected = np.array([object_status], dtype=np.float32),
+            timestamp = time.time()
+        )
+        return gripper_state
 
     def move_arm_joint(self, joint_angles):
         self.robot.servo_joint(

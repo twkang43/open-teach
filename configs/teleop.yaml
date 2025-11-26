@@ -10,6 +10,11 @@ operate: true
 sim_env: false
 run_xela:  false
 
+# Override robot controller settings
+robot:
+  controllers:
+    - control: true
+
 # Visualize 3D and 2D plots
 visualize_xela: false
 visualize_right_2d:  false

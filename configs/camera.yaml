@@ -14,7 +14,7 @@ cam_configs:
   processing_preset: 1 # High accuracy mode
   rotation_angle: 0
 
-oculus_cam: 0 # First camera
+oculus_cam: -1 # Disable oculus cam
 num_cams: 1
 
 hydra:  

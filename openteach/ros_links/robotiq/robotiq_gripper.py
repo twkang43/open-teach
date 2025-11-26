@@ -47,8 +47,8 @@ class RobotiqGripper:
         """Constructor."""
         self.socket = None
         self.command_lock = threading.Lock()
-        self._min_position = 0
-        self._max_position = 255
+        self._min_position = 3
+        self._max_position = 228
         self._min_speed = 0
         self._max_speed = 255
         self._min_force = 0
