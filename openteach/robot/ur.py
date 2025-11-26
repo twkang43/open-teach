@@ -11,7 +11,7 @@ class URArm(RobotWrapper):
         return {
             'joint_states': self.get_joint_state,
             'cartesian_states': self.get_cartesian_state,
-            'gripper_state': self.get_gripper_state
+            'gripper_states': self.get_gripper_state
         }
 
     @property

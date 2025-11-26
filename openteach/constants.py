@@ -74,7 +74,7 @@ KINOVA_HOME_CARTESIAN_INFO = {
 }
 
 # Realsense Camera parameters
-NUM_CAMS = 4
+NUM_CAMS = 1
 CAM_FPS = 30
 CAM_FPS_SIM = 60
 WIDTH = 1280

@@ -108,7 +108,7 @@ class RealsenseCamera(Component):
             print('Starting oculus stream on port: {}\n'.format(self._stream_configs['port'] + VIZ_PORT_OFFSET))
 
         while True:
-            #try:
+            try:
                 self.timer.start_loop()
                 color_image, depth_image, timestamp = self.get_rgb_depth_images()
 
@@ -126,8 +126,8 @@ class RealsenseCamera(Component):
                 self.depth_publisher.pub_intrinsics(self.intrinsics_matrix) # Publishing inrinsics along with the depth publisher
 
                 self.timer.end_loop()
-            # except KeyboardInterrupt:
-            #     break
+            except KeyboardInterrupt:
+                break
         
         print('Shutting down realsense pipeline for camera {}.'.format(self.cam_id))
         self.rgb_publisher.stop()
