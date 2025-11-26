@@ -4,7 +4,7 @@ from .robot import RobotWrapper
 class URArm(RobotWrapper):
     def __init__(self, ip, control, record_type=None):
         self._controller = DexArmControl(ip=ip, control=control, record_type=record_type)
-        self._data_frequency = 50
+        self._data_frequency = 30
 
     @property
     def recorder_functions(self):
