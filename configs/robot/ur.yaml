@@ -46,6 +46,7 @@ controllers:
     _target_: openteach.robot.ur.URArm
     ip: ${ur_ip}
     control: false
+    # control: true
 
 
 # Information to be recorded by the robot 

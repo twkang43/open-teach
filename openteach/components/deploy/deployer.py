@@ -42,29 +42,36 @@ class DeployServer(Component):
         try:
 
             # Kinova should be applied earlier than allegro
-            robot_order = ['franka', 'allegro']
+            # Add UR as 'ur'
+            robot_order = ['franka', 'ur', 'allegro']
 
             for robot in robot_order:
                 if robot in robot_action_dict.keys():
                     if robot not in self._robots.keys():
                         print('Robot: {} is an illegal argument.'.format(robot))
                         return False
-                    if robot == 'kinova' or robot == 'franka':
+                    if robot == 'kinova' or robot == 'franka' or robot == 'ur': # UR 추가
                         # We use cartesian coords with kinova and not the joint angles
                         print('Moving the arm in cartesian coords! to: {}'.format(robot_action_dict[robot]))
-                        if robot == 'franka': # Move the arm with a given duration
+                        if robot == 'franka' or robot == 'ur': # Move the arm with a given duration
                             # self._robots[robot].move_coords(robot_action_dict[robot], duration=1/DEPLOY_FREQ)
                             self._robots[robot].arm_control(robot_action_dict[robot])
                         else:
                             self._robots[robot].move_coords(robot_action_dict[robot])
-
+                    
                     else: 
                         print('Moving allegro to given angles')
                         self._robots[robot].move(robot_action_dict[robot])
                     print('Applying action {} on robot: {}'.format(robot_action_dict[robot], robot))
+            
+            # UR gripper control
+            # if 'gripper_state' in robot_action_dict.keys() and 'ur' in robot_action_dict.keys():
+            #     gripper_action = robot_action_dict['gripper_state']
+            #     self._robots['ur'].gripper_control(gripper_action)
+            #     print(f'Applying gripper action {gripper_action} on UR gripper')
             return True
-        except:
-            print(f'robot: {robot} failed executing in perform_robot_action')
+        except Exception as e:
+            print(f'robot: {robot} failed executing in perform_robot_action. Error: {e}')
             return False
 
     def _get_robot_states(self):
@@ -135,8 +142,8 @@ class DeployServer(Component):
                     print('Applied robot action.')
                 else:
                     self.deployment_socket.send("Command failed!")
-            except:
-                print('Illegal values passed. Terminating session.')
+            except Exception as e:
+                print(f'Illegal values passed. Terminating session. Error: {e}')
                 break
 
         # self.visualizer_process.join()
