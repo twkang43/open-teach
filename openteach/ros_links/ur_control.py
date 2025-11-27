@@ -208,9 +208,17 @@ class DexArmControl():
     
     def get_arm_cartesian_state(self):
         pose = self._get_pose()
+        
+        rotvec = np.array(pose[3:], dtype=np.float64)
+        if np.allclose(rotvec, 0):
+            rpy = np.zeros(3, dtype=np.float32)
+        else:
+            rpy = R.from_rotvec(rotvec).as_euler("xyz", degrees=False).astype(np.float32) # [rx, ry, rz] to [roll, pitch, yaw]
+        
         cartesian_state = dict(
             position = np.array(pose[0:3], dtype=np.float32).flatten(),
             orientation = np.array(pose[3:], dtype=np.float32).flatten(),
+            rpy = rpy,
             timestamp = time.time()
         )
         return cartesian_state

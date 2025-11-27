@@ -77,16 +77,15 @@ class URArmOperator(Operator):
         )
         # Define Robot object - should get IP from config
         self._robot = URArm(ip=UR_IP, control=True)
+        print("Moving robot to home position...")
         self._robot.home()
         time.sleep(5)
-       
+        print("Robot moved to home position")
         
         # Get the initial pose of the robot
         home_pose=np.array(self.robot.get_cartesian_position())
         self.robot_init_H = self.robot_pose_aa_to_affine(home_pose)
         self._timer = FrequencyTimer(VR_FREQ) 
-        
-        print(self.robot_init_H)
         
         # Use the filter
         self.use_filter = use_filter
