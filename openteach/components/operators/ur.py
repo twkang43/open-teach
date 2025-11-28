@@ -49,7 +49,8 @@ class URArmOperator(Operator):
         gripper_port =None,
         cartesian_publisher_port = None,
         joint_publisher_port = None,
-        cartesian_command_publisher_port = None):
+        cartesian_command_publisher_port = None,
+        use_command_queue = False):
 
         self.notify_component_start('UR arm operator')
         # Transformed Arm Keypoint Subscriber

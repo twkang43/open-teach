@@ -108,7 +108,7 @@ class TeleOperator(ProcessInstantiator):
             self._init_operator()
 
     # Function to start the components
-    def _start_component(self, configs, command_queue=None):
+    def _start_component(self, configs):
         component = hydra.utils.instantiate(configs)
         component.stream()
 
@@ -157,10 +157,7 @@ class TeleOperator(ProcessInstantiator):
         def _start_operator_component(operator_config, command_queue):
             component = hydra.utils.instantiate(operator_config)
 
-            from multiprocessing import Process, Queue
-            from threading import Thread, Lock
-
-            robot_lock = Lock()
+            from threading import Thread
 
             stream_thread = Thread(target=component.stream, daemon=True)
             stream_thread.start()
