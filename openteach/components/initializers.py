@@ -6,9 +6,8 @@ from .recorders.robot_state import RobotInformationRecord
 from .recorders.sim_state import SimInformationRecord
 from .recorders.sensors import XelaSensorRecorder
 from .sensors import *
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 from openteach.constants import *
-
 
 
 class ProcessInstantiator(ABC):
@@ -93,7 +92,9 @@ class TeleOperator(ProcessInstantiator):
     """
     def __init__(self, configs):
         super().__init__(configs)
-      
+
+        self.operator_command_queue = Queue()
+
         # For Simulation environment start the environment as well
         if configs.sim_env:
             self._init_sim_environment()
@@ -103,31 +104,30 @@ class TeleOperator(ProcessInstantiator):
         self._init_keypoint_transform()
         self._init_visualizers()
 
-
         if configs.operate: 
             self._init_operator()
-        
-    #Function to start the components
-    def _start_component(self, configs):    
+
+    # Function to start the components
+    def _start_component(self, configs, command_queue=None):
         component = hydra.utils.instantiate(configs)
         component.stream()
 
-    #Function to start the detector component
+    # Function to start the detector component
     def _init_detector(self):
         self.processes.append(Process(
             target = self._start_component,
             args = (self.configs.robot.detector, )
         ))
 
-    #Function to start the sim environment
+    # Function to start the sim environment
     def _init_sim_environment(self):
-         for env_config in self.configs.robot.environment:
+        for env_config in self.configs.robot.environment:
             self.processes.append(Process(
                 target = self._start_component,
                 args = (env_config, )
             ))
 
-    #Function to start the keypoint transform
+    # Function to start the keypoint transform
     def _init_keypoint_transform(self):
         for transform_config in self.configs.robot.transforms:
             self.processes.append(Process(
@@ -135,9 +135,9 @@ class TeleOperator(ProcessInstantiator):
                 args = (transform_config, )
             ))
 
-    #Function to start the visualizers
+    # Function to start the visualizers
     def _init_visualizers(self):
-       
+
         for visualizer_config in self.configs.robot.visualizers:
             self.processes.append(Process(
                 target = self._start_component,
@@ -151,17 +151,51 @@ class TeleOperator(ProcessInstantiator):
                     args = (visualizer_config, )
                 ))
 
-    #Function to start the operator
+    # Function to start the operator
     def _init_operator(self):
+
+        def _start_operator_component(operator_config, command_queue):
+            component = hydra.utils.instantiate(operator_config)
+
+            from multiprocessing import Process, Queue
+            from threading import Thread, Lock
+
+            robot_lock = Lock()
+
+            stream_thread = Thread(target=component.stream, daemon=True)
+            stream_thread.start()
+
+            print("[Operator Manager] Starting operator control loop.")
+            while stream_thread.is_alive():
+                try:
+                    command = command_queue.get(timeout=0.1)
+                    if command == "HOME":
+                        with component._control_lock:
+                            component.robot.home()
+                    elif command == "STOP":
+                        break
+                except:
+                    pass
+            print("[Operator Manager] Operator control loop has ended.")
+
         for operator_config in self.configs.robot.operators:
-            
-            self.processes.append(Process(
-                target = self._start_component,
-                args = (operator_config, )
+            if operator_config.get("use_command_queue", False):
+                self.processes.append(
+                    Process(
+                        target=_start_operator_component,
+                        args=(operator_config, self.operator_command_queue),
+                    )
+                )
 
-            ))
+            else:
+                self.processes.append(
+                    Process(target=self._start_component, args=(operator_config,))
+                )
 
-    
+    def get_operator_command_queue(self):
+        return self.operator_command_queue
+
+
 # Data Collector Class
 class Collector(ProcessInstantiator):
     """
@@ -338,8 +372,3 @@ class Collector(ProcessInstantiator):
                     target = self._start_robot_component,
                     args = (robot_controller_configs, key, )
                 ))
-
-
-    
-
-   

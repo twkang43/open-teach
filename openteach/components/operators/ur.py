@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from copy import deepcopy as copy
 from asyncio import threads
+from threading import Lock
 from openteach.constants import *
 from openteach.utils.timer import FrequencyTimer
 from openteach.utils.network import ZMQKeypointSubscriber, ZMQKeypointPublisher
@@ -18,7 +19,6 @@ from scipy.spatial.transform import Rotation, Slerp
 from .operator import Operator
 from scipy.spatial.transform import Rotation as R
 from numpy.linalg import pinv
-
 
 
 np.set_printoptions(precision=2, suppress=True)
@@ -77,22 +77,24 @@ class URArmOperator(Operator):
         )
         # Define Robot object - should get IP from config
         self._robot = URArm(ip=UR_IP, control=True)
+        self._control_lock = Lock()
         print("Moving robot to home position...")
-        self._robot.home()
+        with self._control_lock:
+            self._robot.home()
         time.sleep(5)
         print("Robot moved to home position")
-        
+
         # Get the initial pose of the robot
         home_pose=np.array(self.robot.get_cartesian_position())
         self.robot_init_H = self.robot_pose_aa_to_affine(home_pose)
         self._timer = FrequencyTimer(VR_FREQ) 
-        
+
         # Use the filter
         self.use_filter = use_filter
         if use_filter:
             robot_init_cart = self._homo2cart(self.robot_init_H)
             self.comp_filter = Filter(robot_init_cart, comp_ratio=0.8)
-            
+
         # Class variables
         self.gripper_flag=1
         self.pause_flag=1
@@ -120,8 +122,7 @@ class URArmOperator(Operator):
     @property
     def transformed_arm_keypoint_subscriber(self):
         return self._transformed_arm_keypoint_subscriber
-        
-    
+
     def robot_pose_aa_to_affine(self,pose_aa: np.ndarray) -> np.ndarray:
         """Converts a robot pose in axis-angle format to an affine matrix.
         Args:
@@ -134,8 +135,8 @@ class URArmOperator(Operator):
         translation = np.array(pose_aa[:3])
 
         return np.block([[rotation, translation[:, np.newaxis]],[0, 0, 0, 1]])
-    
-    #Function to differentiate between real and simulated robot
+
+    # Function to differentiate between real and simulated robot
     def return_real(self):
         return True
 
@@ -149,13 +150,13 @@ class URArmOperator(Operator):
         if data is None:
             return None
         return np.asanyarray(data).reshape(4, 3)
-    
+
     # Function to get the resolution scale mode
     def _get_resolution_scale_mode(self):
         data = self._arm_resolution_subscriber.recv_keypoints()
         res_scale = np.asanyarray(data).reshape(1)[0] # Make sure this data is one dimensional
         return res_scale
-    
+
     # Function to get the arm teleop state from the hand keypoints
     def _get_arm_teleop_state_from_hand_keypoints(self):
         pause_state ,pause_status,pause_right =self.get_pause_state_from_hand_keypoints()
@@ -186,7 +187,6 @@ class URArmOperator(Operator):
             [t, R], axis=0
         )
         return cart
-    
 
     # Get the scaled cartesian pose
     def _get_scaled_cart_pose(self, moving_robot_homo_mat):
@@ -202,7 +202,7 @@ class URArmOperator(Operator):
         # Get the difference in translation between these two cart poses
         diff_in_translation = unscaled_cart_pose[:3] - current_cart_pose[:3]
         scaled_diff_in_translation = diff_in_translation * self.resolution_scale
-        
+
         scaled_cart_pose = np.zeros(6)
         scaled_cart_pose[3:] = unscaled_cart_pose[3:] # Get the rotation directly
         scaled_cart_pose[:3] = current_cart_pose[:3] + scaled_diff_in_translation # Get the scaled translation only
@@ -243,7 +243,7 @@ class URArmOperator(Operator):
         if gripper_state!= self.prev_gripper_flag:
             status= True
         return gripper_state , status , gripper_fl 
-   
+
     # Toggle the robot to pause/resume using ring/middle finger pinch, both finger modes are supported to avoid any hand pose noise issue
     def get_pause_state_from_hand_keypoints(self):
         transformed_hand_coords= self._transformed_hand_keypoint_subscriber.recv_keypoints()
@@ -285,14 +285,14 @@ class URArmOperator(Operator):
 
         if moving_hand_frame is None: 
             return # It means we are not on the arm mode yet instead of blocking it is directly returning
-        
+
         self.hand_moving_H = self._turn_frame_to_homo_mat(moving_hand_frame)
 
         # Transformation code
         H_HI_HH = copy(self.hand_init_H) # Homo matrix that takes P_HI to P_HH - Point in Inital Hand Frame to Point in Home Hand Frame
         H_HT_HH = copy(self.hand_moving_H) # Homo matrix that takes P_HT to P_HH
         H_RI_RH = copy(self.robot_init_H) # Homo matrix that takes P_RI to P_RH
-       
+
         H_HT_HI = np.linalg.pinv(H_HI_HH) @ H_HT_HH # Homo matrix that takes P_HT to P_HI
 
         # Here there are two matrices because the rotation is asymmetric and we imagine we are holding the endeffector and moving the robot.
@@ -313,7 +313,7 @@ class URArmOperator(Operator):
 
         H_HT_HI_r=(pinv(H_R_V) @ H_HT_HI @ H_R_V)[:3,:3] # Finding th
         H_HT_HI_t=(pinv(H_T_V) @ H_HT_HI @ H_T_V)[:3,3]
-         
+
         relative_affine = np.block(
         [[ H_HT_HI_r,  H_HT_HI_t.reshape(3, 1)], [0, 0, 0, 1]])
         target_translation = H_RI_RH[:3,3] + relative_affine[:3,3]
@@ -333,9 +333,9 @@ class URArmOperator(Operator):
         if gripper_flag ==1 and status_change is True:
             self.gripper_correct_state=gripper_state
             self.robot.set_gripper_state(self.gripper_correct_state)
-        
+
         # TODO: Optimize control frequency for UR robot specifications (currently using VR_FREQ)
-        # We save the states here during teleoperation 
+        # We save the states here during teleoperation
         # Note: Frequency may need adjustment for UR robot specifications
         # self.gripper_publisher.pub_keypoints(self.gripper_correct_state,"gripper_right")
         # position=self.robot.get_cartesian_position()
@@ -343,10 +343,11 @@ class URArmOperator(Operator):
         # self.cartesian_publisher.pub_keypoints(position,"cartesian")
         # self.joint_publisher.pub_keypoints(joint_position,"joint")
         # self.cartesian_command_publisher.pub_keypoints(final_pose, "cartesian")
-        
+
         if self.arm_teleop_state == ARM_TELEOP_CONT and gripper_flag == False:
-            self.robot.arm_control(final_pose)
-    
+            with self._control_lock:
+                self.robot.arm_control(final_pose)
+
     # NOTE: This is for debugging should remove this when needed
     def stream(self):
         self.notify_component_start('{} control'.format(self.robot.name))
