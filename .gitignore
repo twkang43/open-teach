@@ -29,3 +29,7 @@ urdf/*
 # Logs
 logs/*
 .egg-info/
+
+# Debug
+debug/
+oculus_hand_2d_plot.jpg
