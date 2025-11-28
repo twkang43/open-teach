@@ -39,6 +39,7 @@ operators:
     gripper_port: ${gripper_publish_port_right}
     use_filter: False
     teleoperation_reset_port: ${teleop_reset_publish_port}
+    use_command_queue: True
 
 # List of controller classes used
 controllers:
