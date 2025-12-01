@@ -1,4 +1,4 @@
-#import rospy
+# import rospy
 import numpy as np
 import time
 from copy import deepcopy as copy
@@ -26,7 +26,7 @@ class RTDE:
         self.rtde_r = rtde_receive.RTDEReceiveInterface(robot_ip)
         self.gripper = robotiq_gripper.RobotiqGripper()
         self.gripper.connect(robot_ip, 63352)
-        
+
         if control:
             print("Activating UR RTDE Control Interface")
             self.rtde_c = rtde_control.RTDEControlInterface(robot_ip)
@@ -201,20 +201,20 @@ class RTDE:
 class DexArmControl():
     def __init__(self, ip, control,record_type=None):
         self.robot = RTDE(robot_ip=ip, control=control) 
-   
+
     # State information functions
     def _get_pose(self):
         return list(self.robot.get_tool_pose()) # [x, y, z, rx, ry, rz] (m, rad)
-    
+
     def get_arm_cartesian_state(self):
         pose = self._get_pose()
-        
+
         rotvec = np.array(pose[3:], dtype=np.float64)
         if np.allclose(rotvec, 0):
             rpy = np.zeros(3, dtype=np.float32)
         else:
             rpy = R.from_rotvec(rotvec).as_euler("xyz", degrees=False).astype(np.float32) # [rx, ry, rz] to [roll, pitch, yaw]
-        
+
         cartesian_state = dict(
             position = np.array(pose[0:3], dtype=np.float32).flatten(),
             orientation = np.array(pose[3:], dtype=np.float32).flatten(),
@@ -222,7 +222,7 @@ class DexArmControl():
             timestamp = time.time()
         )
         return cartesian_state
-   
+
     def get_arm_pose(self):
         pose = np.array(self._get_pose(), dtype=np.float32)
         home_affine = self.robot_pose_aa_to_affine(pose)
@@ -231,7 +231,7 @@ class DexArmControl():
     def get_arm_position(self):
         q = self.robot.get_joint_values()
         return np.array(q, dtype=np.float32)
-    
+
     def get_arm_osc_position(self):
         pose = self._get_pose()
         return np.array(pose, dtype=np.float32)
@@ -250,12 +250,12 @@ class DexArmControl():
         is_open = self.robot.gripper.is_open()
         is_closed = self.robot.gripper.is_closed()
         object_status = self.robot.gripper._get_var(self.robot.gripper.OBJ)
-        
+
         # Normalized position (0.0 = fully open, 1.0 = fully closed)
         min_pos = self.robot.gripper.get_min_position()
         max_pos = self.robot.gripper.get_max_position()
         normalized_position = (gripper_position - min_pos) / (max_pos - min_pos) if max_pos > min_pos else 0.0
-        
+
         gripper_state = dict(
             normalized_position = np.array([normalized_position], dtype=np.float32),
             is_open = np.array([1.0 if is_open else 0.0], dtype=np.float32),
@@ -268,11 +268,11 @@ class DexArmControl():
     def move_arm_joint(self, joint_angles):
         self.robot.servo_joint(
             joint_values=list(joint_angles),
-            speed=0.0, # TODO: tune speed and acceleration
+            speed=0.0,  # TODO: tune speed and acceleration
             acceleration=0.0,
             time=0.008,
             lookahead_time=0.1,
-            gain=300
+            gain=300,
         )
 
     def move_arm_cartesian(self, cartesian_pos, duration=3):
@@ -281,36 +281,35 @@ class DexArmControl():
             pose=pose,
             speed=0.0,  # 0 = use default
             acceleration=0.0,  # 0 = use default
-            asynchronous=False
+            asynchronous=False,
         )
 
     def arm_control(self, cartesian_pose):
         pose = list(cartesian_pose)  # [x, y, z, rx, ry, rz] (m, rad)
-        
+
         self.robot.servo_tool(
             pose=pose,
             speed=0.0,  # 0 = use default
             acceleration=0.0,  # 0 = use default
             time=0.008,
             lookahead_time=0.2,  # Increased for smoother movement
-            gain=100  # Reduced for less aggressive tracking
+            gain=100,  # Reduced for less aggressive tracking
         )
-        
+
     def get_arm_joint_state(self):
         q = self.robot.get_joint_values()
         joint_state = dict(
-            position=np.array(q, dtype=np.float32),
-            timestamp=time.time()
+            position=np.array(q, dtype=np.float32), timestamp=time.time()
         )
         return joint_state
-        
+
     def get_cartesian_state(self):
         return self.get_arm_cartesian_state()
-    
+
     def get_joint_velocity(self):
         qd = self.robot.get_joint_speed()
         return np.array(qd, dtype=np.float32)
-    
+
     def get_joint_torque(self):
         raise NotImplementedError("Joint torque not implemented for UR arms.")
 
@@ -319,24 +318,28 @@ class DexArmControl():
             joint_values=UR_HOME,
             speed=0.3,  # 0 = use default
             acceleration=0.3,  # 0 = use default
-            asynchronous=False
+            asynchronous=False,
         )
 
     def reset_arm(self):
         self.home_arm()
 
     # Full robot commands
-    def move_robot(self,arm_angles):
+    def move_robot(self, arm_angles):
         self.move_arm_joint(arm_angles)
-        
+
     def home_robot(self):
-        self.home_arm() # For now we're using cartesian values
-        
+        self.home_arm()  # For now we're using cartesian values
+
     def set_gripper_state(self, open):
-        goal = self.robot.gripper.get_open_position() if open else self.robot.gripper.get_closed_position()
+        goal = (
+            self.robot.gripper.get_open_position()
+            if open
+            else self.robot.gripper.get_closed_position()
+        )
         self.robot.gripper.move_and_wait_for_pos(position=goal, speed=64, force=1)
-            
-    def robot_pose_aa_to_affine(self,pose_aa: np.ndarray) -> np.ndarray:
+
+    def robot_pose_aa_to_affine(self, pose_aa: np.ndarray) -> np.ndarray:
         """Converts a robot pose in axis-angle format to an affine matrix.
         Args:
             pose_aa (list): [x, y, z, ax, ay, az] where (x, y, z) is the position and (ax, ay, az) is the axis-angle rotation.
@@ -350,3 +353,19 @@ class DexArmControl():
 
         return np.block([[rotation, translation[:, np.newaxis]],
                         [0, 0, 0, 1]])
+
+    # Added for send robot home during teleop
+    def stop_servo(self):
+        if self.robot.rtde_c and self.robot.rtde_c.isConnected():
+            print("Stopping RTDE servo control...")
+            self.robot.rtde_c.servoStop()
+            return True
+        return False
+
+    def restart_servo_control(self):
+        if self.robot.rtde_c and self.robot.rtde_c.isConnected():
+            print("Restarting RTDE control script...")
+            self.robot.rtde_c.reuploadScript()
+            time.sleep(1)
+            return True
+        return False

@@ -68,3 +68,9 @@ class URArm(RobotWrapper):
     
     def set_gripper_state(self, open):
         self._controller.set_gripper_state(open)
+    
+    def stop_servo_control(self):
+        self._controller.stop_servo()
+    
+    def restart_servo_control(self):
+        self._controller.restart_servo_control()
