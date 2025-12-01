@@ -251,10 +251,10 @@ class Collector(ProcessInstantiator):
                     args = (cam_idx, )
                 ))
 
-                self.processes.append(Process(
-                    target = self._start_depth_component,
-                    args = (cam_idx, )
-                ))
+                # self.processes.append(Process(
+                #     target = self._start_depth_component,
+                #     args = (cam_idx, )
+                # ))
         else:
           
             for cam_idx in range(self.configs.num_cams):
@@ -263,10 +263,10 @@ class Collector(ProcessInstantiator):
                     args = (cam_idx, )
                 ))
 
-                self.processes.append(Process(
-                    target = self._start_depth_component,
-                    args = (cam_idx, )
-                ))
+                # self.processes.append(Process(
+                #     target = self._start_depth_component,
+                #     args = (cam_idx, )
+                # ))
 
     #Function to start the sim recorders
     def _init_sim_recorders(self):

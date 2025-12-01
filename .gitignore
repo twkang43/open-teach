@@ -29,3 +29,6 @@ urdf/*
 # Logs
 logs/*
 .egg-info/
+
+# Debug
+debug/
