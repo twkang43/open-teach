@@ -104,6 +104,8 @@ class URArmOperator(Operator):
         self.resolution_scale =0.01
         self.arm_teleop_state = ARM_TELEOP_STOP
 
+        self.send_home_when_stop = False
+
     @property
     def timer(self):
         return self._timer
@@ -262,30 +264,26 @@ class URArmOperator(Operator):
         return pause_state , pause_status , pause_right
 
     # Fucntion to get 'send home' command from hand keypoints
-    def get_send_home_from_hand_keypoints(self):
+    def check_send_home_from_hand_keypoints(self):
         transformed_hand_coords = (
             self._transformed_hand_keypoint_subscriber.recv_keypoints()
         )
-        index_distance = np.linalg.norm(
+        pinky_distance = np.linalg.norm(
             transformed_hand_coords[OCULUS_JOINTS["pinky"][-1]]
             - transformed_hand_coords[OCULUS_JOINTS["thumb"][-1]]
         )
-        thresh = 0.03
-        send_home_flag = False
-        if index_distance < thresh:
-            send_home_flag = True
-        return send_home_flag
+        thresh = 0.1
+        if pinky_distance < thresh:
+            if not self.send_home_when_stop:
+                print("Robot will send to home when stopped.")
+                self.send_home_when_stop = True
+            else:
+                print("Robot will NOT send to home when stopped.")
+                self.send_home_when_stop = False
 
     # Function to apply retargeted angles
     def _apply_retargeted_angles(self, log=False):
-
-        send_home_flag = self.get_send_home_from_hand_keypoints()
-        if send_home_flag and self.arm_teleop_state == ARM_TELEOP_STOP:
-            print("Sending robot to home position...")
-            self.robot.home()
-            time.sleep(5)
-            print("Robot moved to home position")
-            return
+        self.check_send_home_from_hand_keypoints()
 
         # See if there is a reset in the teleop state
         new_arm_teleop_state,pause_status,pause_right = self._get_arm_teleop_state_from_hand_keypoints()
@@ -382,6 +380,14 @@ class URArmOperator(Operator):
                     self._apply_retargeted_angles(log=False)
 
                     self.timer.end_loop()
+                elif (
+                    self.arm_teleop_state == ARM_TELEOP_STOP
+                ):  # Suppose the robot is in stop mode
+                    if self.send_home_when_stop:
+                        print("Sending robot to home position...")
+                        self.robot.home()
+                        time.sleep(5)
+                        print("Robot moved to home position")
             except KeyboardInterrupt:
                 break
 
