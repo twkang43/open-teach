@@ -5,7 +5,7 @@ import signal
 import time
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLineEdit, QLabel, QComboBox, QGroupBox, QSpinBox
+    QPushButton, QLineEdit, QLabel, QComboBox, QGroupBox, QCheckBox
 )
 from PyQt5.QtCore import Qt, QTimer
 
@@ -25,7 +25,7 @@ class ControlPanel(QWidget):
         self.init_ui()
 
         self.timer = QTimer(self)
-        self.timer.timeout.connect(self.check_process_status)
+        self.timer.timeout.connect(self.check_process_dataset_status)
         self.timer.start(500)
     
     def init_ui(self):
@@ -82,8 +82,16 @@ class ControlPanel(QWidget):
 
         # Demo Number & Buttons
         h2_layout = QHBoxLayout()
+
+        self.use_last_num_checkbox = QCheckBox("Use Last Num")
+        self.use_last_num_checkbox.setChecked(True)
+        self.use_last_num_checkbox.stateChanged.connect(self.toggle_demo_num_control)
+        h2_layout.addWidget(self.use_last_num_checkbox)
+
         h2_layout.addWidget(QLabel("Demo Num: "))
-        self.demo_num_input = QLineEdit("0") # Default demo number
+        latest_demo_num = self.check_latest_data_num(os.path.join(self.base_path_input.text(), self.task_input.text().strip()))
+        self.demo_num_input = QLineEdit(str(latest_demo_num)) # Latest demo number
+        self.demo_num_input.setEnabled(not self.use_last_num_checkbox.isChecked())
         h2_layout.addWidget(self.demo_num_input)
 
         self.collect_start_btn = QPushButton("Start Collect")
@@ -121,10 +129,24 @@ class ControlPanel(QWidget):
             return None
         return process_handle
     
+    def toggle_demo_num_control(self, state):
+        is_checked = (state == Qt.Checked)
+        self.demo_num_input.setEnabled(not is_checked)
+
+        if not is_checked:
+            latest_demo_num = self.check_latest_data_num(os.path.join(self.base_path_input.text(), self.task_input.text().strip()))
+            self.demo_num_input.setText(str(latest_demo_num))
+
+    def map_robot_name(self, display_name):
+        robot_name_mapping = {
+            "UR10e": "ur"
+        }
+        return robot_name_mapping.get(display_name, "ur")
+    
     def start_teleop(self):
         global TELEOP_PROCESS
         if TELEOP_PROCESS is None:
-            robot_name = self.robot_combo.currentText()
+            robot_name = self.map_robot_name(self.robot_combo.currentText())
             command = f"python teleop.py robot={robot_name}"
 
             TELEOP_PROCESS = self._run_process(command, "Teleop")
@@ -140,17 +162,32 @@ class ControlPanel(QWidget):
             self.teleop_start_btn.setEnabled(True)
             self.teleop_stop_btn.setEnabled(False)
 
+    def check_latest_data_num(self, path):
+        if not os.path.exists(path):
+            return 0
+        existing_demos = [
+            d for d in os.listdir(path)
+            if os.path.isdir(os.path.join(path, d)) and d.startswith("demonstration_")
+        ]
+        if not existing_demos:
+            return 0
+        demo_nums = [
+            int(d.split("_")[1]) for d in existing_demos
+            if d.split("_")[1].isdigit()
+        ]
+        return max(demo_nums) + 1 if demo_nums else 0
+
     def start_collect(self):
         global COLLECT_PROCESS
         if COLLECT_PROCESS is None:
             base_path = self.base_path_input.text()
-            robot_name = self.robot_combo.currentText()
+            robot_name = self.map_robot_name(self.robot_combo.currentText())
             task_name = self.task_input.text().strip()
             demo_num = self.demo_num_input.text()
 
             storage_path = os.path.join(base_path, task_name)
             command = (
-                f"python data_collect.py robot={robot_name} demo_num={demo_num}"
+                f"python data_collect.py robot={robot_name} demo_num={demo_num} "
                 f"storage_path={storage_path}"
             )
 
@@ -171,7 +208,7 @@ class ControlPanel(QWidget):
         self.status_label.setText(f"Status: {message}")
         print(f"[GUI] {message}")
     
-    def check_process_status(self):
+    def check_process_dataset_status(self):
         global TELEOP_PROCESS, COLLECT_PROCESS
 
         if TELEOP_PROCESS and TELEOP_PROCESS.poll() is not None:
@@ -187,6 +224,10 @@ class ControlPanel(QWidget):
             COLLECT_PROCESS = None
             self.collect_start_btn.setEnabled(True)
             self.collect_stop_btn.setEnabled(False)
+        
+        if self.use_last_num_checkbox.isChecked():
+            latest_demo_num = self.check_latest_data_num(os.path.join(self.base_path_input.text(), self.task_input.text().strip()))
+            self.demo_num_input.setText(str(latest_demo_num))
     
     def closeEvent(self, event):
         print("GUI closing. Stopping active processes...")
