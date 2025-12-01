@@ -227,7 +227,7 @@ class URArmOperator(Operator):
     # Function to get gripper state from hand keypoints
     def get_gripper_state_from_hand_keypoints(self):
         transformed_hand_coords= self._transformed_hand_keypoint_subscriber.recv_keypoints()
-        distance = np.linalg.norm(transformed_hand_coords[OCULUS_JOINTS['middle'][-1]]- transformed_hand_coords[OCULUS_JOINTS['thumb'][-1]])
+        distance = np.linalg.norm(transformed_hand_coords[OCULUS_JOINTS['index'][-1]]- transformed_hand_coords[OCULUS_JOINTS['thumb'][-1]])
         thresh = 0.03
         gripper_fl =False
         if distance < thresh:
