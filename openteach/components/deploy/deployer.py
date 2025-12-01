@@ -25,7 +25,8 @@ class DeployServer(Component):
             port = self.configs.deployment_port
         )
 
-        self.timer = FrequencyTimer(DEPLOY_FREQ)
+        # self.timer = FrequencyTimer(DEPLOY_FREQ)
+        self.timer = FrequencyTimer(20)
 
     def _init_robot_subscribers(self):
         robot_controllers = hydra.utils.instantiate(self.configs.robot.controllers)

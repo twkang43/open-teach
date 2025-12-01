@@ -57,7 +57,7 @@ class ControlPanel(QWidget):
         try:
             with open(yaml_file, 'r') as file:
                 config = yaml.safe_load(file)
-                self.host_address = config.get('host_address', 'localhost')
+                self.initial_host_address = config.get('host_address', 'localhost')
         except Exception as e:
             print(f"Error reading network.yaml: {e}")
 
@@ -83,8 +83,8 @@ class ControlPanel(QWidget):
         # Host Address
         layout.addWidget(QLabel(f"Host Address: "))
         self.camera_host_combo = QComboBox()
-        self.camera_host_combo.addItems([self.host_address, "147.46.76.120", "192.168.1.90"])
-        self.camera_host_combo.setCurrentText(self.host_address)
+        self.camera_host_combo.addItems([self.initial_host_address, "147.46.76.120", "192.168.1.90"])
+        self.camera_host_combo.setCurrentText(self.initial_host_address)
         layout.addWidget(self.camera_host_combo)
 
         # Status Indicator
@@ -244,7 +244,7 @@ class ControlPanel(QWidget):
             selected_host = self.camera_host_combo.currentText()
 
             while CAMERA_PROCESS is None:
-                command = f"python camera_stream.py network.host_address={selected_host}"
+                command = f"python robot_camera.py host_address={selected_host}"
                 CAMERA_PROCESS = self._run_process(command, "Camera Stream")
 
         if CAMERA_PROCESS:
@@ -262,32 +262,12 @@ class ControlPanel(QWidget):
             self.camera_status_indicator.set_color(Qt.red)
             self.camera_status_label.setText("Camera Stream: OFF")
 
-    def start_deploy(self):
-        global DEPLOY_PROCESS
-        if DEPLOY_PROCESS is None:
-            robot_name = self.map_robot_name(self.deploy_robot_combo.currentText())
-            command = f"python deploy_server.py robot={robot_name}"
-            
-            DEPLOY_PROCESS = self._run_process(command, "Deploy Server")
-            
-            if DEPLOY_PROCESS:
-                self.deploy_start_btn.setEnabled(False)
-                self.deploy_stop_btn.setEnabled(True)
-                self.deploy_status_indicator.set_color(Qt.green)
-
-    def stop_deploy(self):
-        global DEPLOY_PROCESS
-        DEPLOY_PROCESS = self._stop_process(DEPLOY_PROCESS, "Deploy Server")
-        if DEPLOY_PROCESS is None:
-            self.deploy_start_btn.setEnabled(True)
-            self.deploy_stop_btn.setEnabled(False)
-            self.deploy_status_indicator.set_color(Qt.red)
-
     def start_teleop(self):
         global TELEOP_PROCESS
         if TELEOP_PROCESS is None:
-            robot_name = self.map_robot_name(self.robot_combo.currentText())
-            command = f"python teleop.py robot={robot_name}"
+            robot_name = self.map_robot_name(self.teleop_robot_combo.currentText())
+            host_network = self.camera_host_combo.currentText()
+            command = f"python teleop.py robot={robot_name} host_address={host_network}"
 
             TELEOP_PROCESS = self._run_process(command, "Teleop")
 
@@ -321,14 +301,15 @@ class ControlPanel(QWidget):
         global COLLECT_PROCESS
         if COLLECT_PROCESS is None:
             base_path = self.base_path_input.text()
-            robot_name = self.map_robot_name(self.robot_combo.currentText())
+            robot_name = self.map_robot_name(self.teleop_robot_combo.currentText())
+            host_network = self.camera_host_combo.currentText()
             task_name = self.task_input.text().strip()
             demo_num = self.demo_num_input.text()
 
             storage_path = os.path.join(base_path, task_name)
             command = (
-                f"python data_collect.py robot={robot_name} demo_num={demo_num} "
-                f"storage_path={storage_path}"
+                f"python data_collect.py robot={robot_name} host_address={host_network} "
+                f"storage_path={storage_path} demo_num={demo_num}"
             )
 
             COLLECT_PROCESS = self._run_process(command, "Data Collection")
@@ -344,6 +325,31 @@ class ControlPanel(QWidget):
             self.collect_start_btn.setEnabled(True)
             self.collect_stop_btn.setEnabled(False)
     
+    def start_deploy(self):
+        global DEPLOY_PROCESS
+        if DEPLOY_PROCESS is None:
+            robot_name = self.map_robot_name(self.deploy_robot_combo.currentText())
+            host_network = self.camera_host_combo.currentText()
+            command = (
+                f"python deploy_server.py robot={robot_name} host_address={host_network} "
+                f"robot.controllers.0.control=true"
+            )
+            
+            DEPLOY_PROCESS = self._run_process(command, "Deploy Server")
+            
+            if DEPLOY_PROCESS:
+                self.deploy_start_btn.setEnabled(False)
+                self.deploy_stop_btn.setEnabled(True)
+                self.deploy_status_indicator.set_color(Qt.green)
+
+    def stop_deploy(self):
+        global DEPLOY_PROCESS
+        DEPLOY_PROCESS = self._stop_process(DEPLOY_PROCESS, "Deploy Server")
+        if DEPLOY_PROCESS is None:
+            self.deploy_start_btn.setEnabled(True)
+            self.deploy_stop_btn.setEnabled(False)
+            self.deploy_status_indicator.set_color(Qt.red)
+
     def update_status(self, message):
         self.status_label.setText(f"Status: {message}")
         print(f"[GUI] {message}")

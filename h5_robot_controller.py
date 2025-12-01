@@ -93,7 +93,7 @@ def send_actions_to_deployer(actions):
 
 if __name__ == '__main__':
     # 시연 파일 경로 (ur_cartesian_states.h5 등이 포함된 디렉토리)
-    DEMO_PATH = 'extracted_data/put_lemon_in_bowl/demonstration_0' # [cite: 198, 378, 614]
+    DEMO_PATH = 'extracted_data/debug_task/demonstration_2' # [cite: 198, 378, 614]
     
     ur_actions = load_ur_demonstration(DEMO_PATH)
     
