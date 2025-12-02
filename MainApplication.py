@@ -53,7 +53,7 @@ class ControlPanel(QWidget):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.check_process_dataset_status)
         self.timer.start(500)
-    
+
     def _read_network_config(self, yaml_file='configs/network.yaml'):
         try:
             with open(yaml_file, 'r') as file:
@@ -78,7 +78,7 @@ class ControlPanel(QWidget):
 
         self.setLayout(main_layout)
 
-# ----- UI Component Creation Methods ----- #
+    # ----- UI Component Creation Methods ----- #
 
     def _create_host_address_selector(self):
         group = QGroupBox("Host Address Selection")
@@ -110,7 +110,7 @@ class ControlPanel(QWidget):
         self.camera_stop_btn = QPushButton("Stop Camera")
         self.camera_stop_btn.clicked.connect(self.stop_camera)
         self.camera_stop_btn.setEnabled(False)
-        
+
         layout.addWidget(self.camera_start_btn)
         layout.addWidget(self.camera_stop_btn)
 
@@ -194,43 +194,43 @@ class ControlPanel(QWidget):
 
         group.setLayout(v_layout)
         return group
-    
+
     def _create_deploy_group(self):
         group = QGroupBox("Deploy Server Control")
         layout = QHBoxLayout()
-        
+
         # Status Indicator
         self.deploy_status_indicator = StatusIndicator(Qt.red)
         layout.addWidget(self.deploy_status_indicator)
-        
+
         # Robot Selection
         layout.addWidget(QLabel("Robot:"))
         self.deploy_robot_combo = QComboBox()
         self.deploy_robot_combo.addItems(["UR10e"])
         self.deploy_robot_combo.setCurrentText("UR10e") 
         layout.addWidget(self.deploy_robot_combo)
-        
+
         # Buttons
         self.deploy_start_btn = QPushButton("Start Deploy")
         self.deploy_start_btn.clicked.connect(self.start_deploy)
-        
+
         self.deploy_stop_btn = QPushButton("Stop Deploy")
         self.deploy_stop_btn.clicked.connect(self.stop_deploy)
         self.deploy_stop_btn.setEnabled(False)
-        
+
         layout.addWidget(self.deploy_start_btn)
         layout.addWidget(self.deploy_stop_btn)
-    
+
         self.send_ur_home_btn = QPushButton("Send UR Home")
         self.send_ur_home_btn.clicked.connect(self.send_ur_home)
         self.send_ur_home_btn.setEnabled(False)
         layout.addWidget(self.send_ur_home_btn)
-        
+
         group.setLayout(layout)
         return group
 
     def _create_replay_group(self):
-        group = QGroupBox("Robot Replay Control")
+        group = QGroupBox("Replay Control")
         v_layout = QVBoxLayout()
 
         # Path & Task
@@ -251,7 +251,7 @@ class ControlPanel(QWidget):
 
         # Demo Number
         h2_layout = QHBoxLayout()
-        h2_layout.addWidget(QLabel("Demo Num: "))
+        h2_layout.addWidget(QLabel("Demo Name: "))
         self.replay_demo_combo = QComboBox()
         demo_list = self.get_demo_list(self.replay_demo_path_input.text(), self.replay_task_input.text().strip())
         self.replay_demo_combo.addItems(demo_list)
@@ -278,7 +278,7 @@ class ControlPanel(QWidget):
         group.setLayout(v_layout)
         return group
 
-# ----- Process Management Methods ----- #
+    # ----- Process Management Methods ----- #
 
     def _run_process(self, command, process_name):
         try:
@@ -288,7 +288,7 @@ class ControlPanel(QWidget):
         except Exception as e:
             self.update_status(f"Failed to start {process_name}: {e}")
             return None
-    
+
     def _stop_process(self, process_handle, process_name):
         if process_handle and process_handle.poll() is None:
             try:
@@ -300,8 +300,8 @@ class ControlPanel(QWidget):
                 self.update_status(f"{process_name} forcibly stopped: {e}")
             return None
         return process_handle
-    
-# ----- UI Interaction Methods ----- #
+
+    # ----- UI Interaction Methods ----- #
 
     def toggle_demo_num_control(self, state):
         is_checked = (state == Qt.Checked)
@@ -316,7 +316,7 @@ class ControlPanel(QWidget):
             "UR10e": "ur"
         }
         return robot_name_mapping.get(display_name, "ur")
-    
+
     def check_latest_data_num(self, path):
         if not os.path.exists(path):
             return 0
@@ -331,7 +331,7 @@ class ControlPanel(QWidget):
             if d.split("_")[1].isdigit()
         ]
         return max(demo_nums) + 1 if demo_nums else 0
-   
+
     def get_demo_list(self, path, task_name):
         if not task_name:
             return []
@@ -354,7 +354,7 @@ class ControlPanel(QWidget):
             process.wait()
             self.update_status("Send UR Home command completed.")
 
-# ----- Control Methods ----- #
+    # ----- Control Methods ----- #
 
     def start_camera(self):
         global CAMERA_PROCESS
@@ -368,7 +368,7 @@ class ControlPanel(QWidget):
                 self.camera_stop_btn.setEnabled(True)
                 self.camera_status_indicator.set_color(Qt.green)
                 self.camera_status_label.setText(f"Camera Stream: ON")
-        
+
     def stop_camera(self):
         global CAMERA_PROCESS
         CAMERA_PROCESS = self._stop_process(CAMERA_PROCESS, "Camera Stream")
@@ -377,7 +377,6 @@ class ControlPanel(QWidget):
             self.camera_stop_btn.setEnabled(False)
             self.camera_status_indicator.set_color(Qt.red)
             self.camera_status_label.setText("Camera Stream: OFF")
-
 
     def start_teleop(self):
         global TELEOP_PROCESS
@@ -391,7 +390,7 @@ class ControlPanel(QWidget):
                 self.teleop_start_btn.setEnabled(False)
                 self.teleop_stop_btn.setEnabled(True)
                 self.teleop_status_indicator.set_color(Qt.green)
-    
+
     def stop_teleop(self):
         global TELEOP_PROCESS
         TELEOP_PROCESS = self._stop_process(TELEOP_PROCESS, "Teleop")
@@ -399,7 +398,6 @@ class ControlPanel(QWidget):
             self.teleop_start_btn.setEnabled(True)
             self.teleop_stop_btn.setEnabled(False)
             self.teleop_status_indicator.set_color(Qt.red)
-
 
     def start_collect(self):
         global COLLECT_PROCESS
@@ -423,7 +421,7 @@ class ControlPanel(QWidget):
                 self.collect_stop_btn.setEnabled(True)
                 self.collect_status_indicator.set_color(Qt.green)
                 self.collect_status_label.setText("Data Collection: ON")
-    
+
     def stop_collect(self):
         global COLLECT_PROCESS
         COLLECT_PROCESS = self._stop_process(COLLECT_PROCESS, "Data Collection")
@@ -432,7 +430,6 @@ class ControlPanel(QWidget):
             self.collect_stop_btn.setEnabled(False)
             self.collect_status_indicator.set_color(Qt.red)
             self.collect_status_label.setText("Data Collection: OFF")
-    
 
     def start_deploy(self):
         global DEPLOY_PROCESS
@@ -443,9 +440,9 @@ class ControlPanel(QWidget):
                 f"python deploy_server.py robot={robot_name} host_address={host_network} "
                 f"robot.controllers.0.control=true"
             )
-            
+
             DEPLOY_PROCESS = self._run_process(command, "Deploy Server")
-            
+
             if DEPLOY_PROCESS:
                 self.deploy_start_btn.setEnabled(False)
                 self.deploy_stop_btn.setEnabled(True)
@@ -460,7 +457,6 @@ class ControlPanel(QWidget):
             self.deploy_stop_btn.setEnabled(False)
             self.send_ur_home_btn.setEnabled(False)
             self.deploy_status_indicator.set_color(Qt.red)
-
 
     def start_replay(self):
         global REPLAY_PROCESS
@@ -477,9 +473,9 @@ class ControlPanel(QWidget):
             command = (
                 f"python replay.py demo_path={demo_path} host_address={host_network}"
             )
-            
+
             REPLAY_PROCESS = self._run_process(command, "Robot Replay")
-            
+
             if REPLAY_PROCESS:
                 self.replay_start_btn.setEnabled(False)
                 self.replay_stop_btn.setEnabled(True)
@@ -495,12 +491,12 @@ class ControlPanel(QWidget):
             self.replay_status_indicator.set_color(Qt.red)
             self.replay_status_label.setText("Robot Replay: OFF")
 
-# ----- Utility Methods ----- #
+    # ----- Utility Methods ----- #
 
     def update_status(self, message):
         self.status_label.setText(f"Status: {message}")
         print(f"[GUI] {message}")
-    
+
     def update_replay_demo_list(self):
         current_demo = self.replay_demo_combo.currentText()
         demo_list = self.get_demo_list(self.replay_demo_path_input.text(), self.replay_task_input.text().strip())
@@ -534,7 +530,7 @@ class ControlPanel(QWidget):
             COLLECT_PROCESS = None
             self.collect_start_btn.setEnabled(True)
             self.collect_stop_btn.setEnabled(False)
-        
+
         if self.use_last_num_checkbox.isChecked():
             latest_demo_num = self.check_latest_data_num(os.path.join(self.base_path_input.text(), self.task_input.text().strip()))
             self.demo_num_input.setText(str(latest_demo_num))

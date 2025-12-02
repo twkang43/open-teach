@@ -63,6 +63,10 @@ For using the API we use for policy learning, use [this](https://github.com/NYU-
 
 For adding your own robot and simulation refer [here](/docs/add_your_own_robot.md)
 
+### Using GUI application
+
+For using the GUI application(`MainApplication.py`) for using camera launching, teleoperation, data collection, deploy and replay easily refer [here](/docs/howto_gui_application.md)
+
 ### Citation
 If you use this repo in your research, please consider citing the paper as follows:
 ```
@@ -74,6 +78,4 @@ If you use this repo in your research, please consider citing the paper as follo
       archivePrefix={arXiv},
       primaryClass={cs.RO}
 }
-
-
-
+```
