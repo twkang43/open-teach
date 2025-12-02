@@ -1,3 +1,4 @@
+import time
 import hydra
 import numpy as np
 import pickle
@@ -33,6 +34,8 @@ class DeployServer(Component):
         self._robots = dict()
         for robot in robot_controllers:
             self._robots[robot.name] = robot
+            if robot.name == 'ur':
+                robot.home()
 
     def _init_sensor_subscribers(self):
         xela_controllers = hydra.utils.instantiate(self.configs.robot.xela_controllers)
@@ -41,9 +44,15 @@ class DeployServer(Component):
 
     def _perform_robot_action(self, robot_action_dict):
         try:
-
+            if 'ur_home' in robot_action_dict.keys():
+                print('Send UR robot to home.')
+                self._robots['ur'].stop_servo_control()
+                self._robots['ur'].home()
+                time.sleep(3) # Wait for 3 seconds to ensure the robot is homed
+                return True
+            
             # Kinova should be applied earlier than allegro
-            # Add UR as 'ur'
+            # Add UR as 'ur', ur's gripper as 'gripper'
             robot_order = ['franka', 'ur', 'allegro']
 
             for robot in robot_order:
@@ -51,25 +60,27 @@ class DeployServer(Component):
                     if robot not in self._robots.keys():
                         print('Robot: {} is an illegal argument.'.format(robot))
                         return False
-                    if robot == 'kinova' or robot == 'franka' or robot == 'ur': # UR 추가
+                    if robot == 'kinova' or robot == 'franka':
                         # We use cartesian coords with kinova and not the joint angles
                         print('Moving the arm in cartesian coords! to: {}'.format(robot_action_dict[robot]))
-                        if robot == 'franka' or robot == 'ur': # Move the arm with a given duration
+                        if robot == 'franka': # Move the arm with a given duration
                             # self._robots[robot].move_coords(robot_action_dict[robot], duration=1/DEPLOY_FREQ)
                             self._robots[robot].arm_control(robot_action_dict[robot])
                         else:
                             self._robots[robot].move_coords(robot_action_dict[robot])
-                    
-                    else: 
+                            
+                    # UR robot
+                    elif robot == 'ur':
+                        # We use cartesian coords with ur
+                        print('Moving the arm in cartesian coords! to: {}'.format(robot_action_dict[robot]))
+                        self._robots[robot].arm_control(robot_action_dict[robot][:6]) # First 6 values are for the arm
+                        self._robots[robot].set_gripper_state(robot_action_dict[robot][6]) # Last value is for the gripper
+
+                    elif robot == 'allegro': 
                         print('Moving allegro to given angles')
                         self._robots[robot].move(robot_action_dict[robot])
                     print('Applying action {} on robot: {}'.format(robot_action_dict[robot], robot))
-            
-            # UR gripper control
-            # if 'gripper_state' in robot_action_dict.keys() and 'ur' in robot_action_dict.keys():
-            #     gripper_action = robot_action_dict['gripper_state']
-            #     self._robots['ur'].gripper_control(gripper_action)
-            #     print(f'Applying gripper action {gripper_action} on UR gripper')
+
             return True
         except Exception as e:
             print(f'robot: {robot} failed executing in perform_robot_action. Error: {e}')

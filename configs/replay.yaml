@@ -1,0 +1,11 @@
+defaults:
+  - _self_
+  - network
+  - robot: ur
+
+demo_path: extracted_data/debug_demo/demonstration_0
+
+hydra:
+  output_subdir: null
+  run:
+    dir: .
