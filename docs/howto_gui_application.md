@@ -32,11 +32,13 @@ Sometimes realsense camera is busy, so you may need to click it multiple times.
 Choose your robot (actually, there is only one robot and that is the default setting for now...) and click 'Start Teleop' to start teleoperation.
 Now you can control the robot with Meta Quest 3.
 
-How to control?
-Left hand middle pinch(중지-엄지 맞대기): Start teleoperation
-Left hand ring pinch(약지-엄지 맞대기): Stop teleoperation
-Right hand index pinch(검지-엄지 맞대기): Open/Close gripper
-Right hand pinky pinch(새끼-엄지 맞대기): Send robot to home position
+#### How to control?
+
+- Left hand middle pinch(중지-엄지 맞대기): Start teleoperation
+- Left hand ring pinch(약지-엄지 맞대기): Stop teleoperation
+- Right hand index pinch(검지-엄지 맞대기): Open/Close gripper
+- Right hand pinky pinch(새끼-엄지 맞대기): Send robot to home position
+
 When robot start to move home position by right hand pinky pinch, control process will sleep for 5 seconds. 
 I recommend you to stop teleoperation during this time. 
 After 5 seconds and if you start teloperation again, controller will be reset to current right hand pose. 
