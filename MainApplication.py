@@ -541,6 +541,7 @@ class ControlPanel(QWidget):
             DEPLOY_PROCESS = None
             self.deploy_start_btn.setEnabled(True)
             self.deploy_stop_btn.setEnabled(False)
+            self.send_ur_home_btn.setEnabled(False)
             self.deploy_status_indicator.set_color(Qt.red)
 
         if REPLAY_PROCESS and REPLAY_PROCESS.poll() is not None:

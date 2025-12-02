@@ -13,11 +13,11 @@ from openteach.constants import DEPLOY_FREQ, VR_FREQ
 class DeployServer(Component):
     def __init__(self, configs):
         self.configs = configs
-        
+
         # Initializing the camera subscribers
         self._init_robot_subscribers()
 
-        # Initializing the sensor subscribers 
+        # Initializing the sensor subscribers
         if configs.use_sensor:
             self._init_sensor_subscribers()
 
@@ -50,7 +50,7 @@ class DeployServer(Component):
                 self._robots['ur'].home()
                 time.sleep(3) # Wait for 3 seconds to ensure the robot is homed
                 return True
-            
+
             # Kinova should be applied earlier than allegro
             # Add UR as 'ur'
             robot_order = ['franka', 'ur', 'allegro']
@@ -63,18 +63,22 @@ class DeployServer(Component):
                     if robot == 'kinova' or robot == 'franka':
                         # We use cartesian coords with kinova and not the joint angles
                         print('Moving the arm in cartesian coords! to: {}'.format(robot_action_dict[robot]))
-                        if robot == 'franka': # Move the arm with a given duration
-                            # self._robots[robot].move_coords(robot_action_dict[robot], duration=1/DEPLOY_FREQ)
+                        if robot == "franka":  # Move the arm with a given duration
                             self._robots[robot].arm_control(robot_action_dict[robot])
                         else:
                             self._robots[robot].move_coords(robot_action_dict[robot])
-                            
+
                     # UR robot
                     elif robot == 'ur':
                         # We use cartesian coords with ur
                         print('Moving the arm in cartesian coords! to: {}'.format(robot_action_dict[robot]))
                         self._robots[robot].arm_control(robot_action_dict[robot][:6]) # First 6 values are for the arm
-                        self._robots[robot].set_gripper_state(robot_action_dict[robot][6]) # Last value is for the gripper
+                        self._robots[robot].set_gripper_state(
+                            robot_action_dict[robot][6]
+                        )
+                        # self._robots[robot].move_gripper( # NOTE: Use move_gripper if you want specific control
+                        #     robot_action_dict[robot][6]
+                        # )  # Last value is for the gripper
 
                     elif robot == 'allegro': 
                         print('Moving allegro to given angles')
@@ -145,7 +149,7 @@ class DeployServer(Component):
                 success = self._perform_robot_action(robot_action)
                 print('success: {}'.format(success))
                 # More accurate sleep
-                
+
                 self.timer.end_loop()
 
                 if success:

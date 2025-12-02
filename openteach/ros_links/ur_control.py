@@ -339,6 +339,17 @@ class DexArmControl():
         )
         self.robot.gripper.move_and_wait_for_pos(position=goal, speed=64, force=1)
 
+    def move_gripper(self, position): # NOTE: Use this function for specific gripper control
+        position = int(
+            self.robot.gripper.get_min_position()
+            + position
+            * (
+                self.robot.gripper.get_max_position()
+                - self.robot.gripper.get_min_position()
+            )
+        )
+        self.robot.gripper.move_and_wait_for_pos(position=position, speed=64, force=1)
+
     def robot_pose_aa_to_affine(self, pose_aa: np.ndarray) -> np.ndarray:
         """Converts a robot pose in axis-angle format to an affine matrix.
         Args:

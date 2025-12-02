@@ -22,25 +22,27 @@ def load_ur_demonstration(demo_path):
     """
     Load cartesian and gripper states for UR robot from h5 files located in demo_path.
     """
-    
+
     # Cartesian states: positions (x,y,z) + orientations (roll, pitch, yaw)
     with h5py.File(f'{demo_path}/ur_cartesian_states.h5', 'r') as f:
         positions = f['positions'][:]
         rpys = f['orientations'][:]
-        
+
         cartesian_actions = np.hstack((positions, rpys)) 
 
     # Gripper states: normalized positions
     with h5py.File(f'{demo_path}/ur_gripper_states.h5', 'r') as f:
-        gripper_actions = f['normalized_positions'][:] 
+        gripper_actions = f["is_opens"][:]
+        # gripper_actions = f["normalized_positions"][:] # NOTE: Use this line if you want specific gripper positions
 
     # Ensure both action sequences have the same length
     min_length = min(len(cartesian_actions), len(gripper_actions))
-    
+
     actions = []
     for i in range(min_length):
         action_dict = {
-            'ur': cartesian_actions[i].tolist() + [1 - gripper_actions[i][0]], # Append gripper state to UR action
+            "ur": cartesian_actions[i].tolist()
+            + [gripper_actions[i][0]],  # Append gripper state to UR action
         }
         actions.append(action_dict)
 

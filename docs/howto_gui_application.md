@@ -75,3 +75,8 @@ Also, make sure the robot is in the safe position (like home position) before st
 You may use 'Send UR Home' button in Deploy Server Control to send robot to home position.
 Click 'Start Replay' to start replaying the chosen demonstration.
 Click 'Stop Replay' to stop replaying.
+
+Note.
+Currently `replay.py` send gripper action open when `gripper_state` value is 1.0 and close when the value is 0.0.
+`gripper_state` is using `is_opens` value in h5 file.
+By this logic, replay may not seem as what you did.
