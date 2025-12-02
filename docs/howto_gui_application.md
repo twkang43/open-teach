@@ -47,7 +47,7 @@ After 5 seconds and if you start teloperation again, controller will be reset to
 
 Save Path is the base directory for saving the collected data.
 Task is the sub-directory under Save Path.
-Collected data will be save under Save-Path/Task/demonstartion_XX.
+Collected data will be save under Save-Path/Task/demonstration_XX.
 If use 'Use Last Num' option, Demo Num will be set as the biggest existing demo num + 1 under the Task directory.
 Click 'Start Data Collection' to start data collection.
 Click 'Stop Data Collection' after you finish collecting data.
