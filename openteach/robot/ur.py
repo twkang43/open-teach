@@ -25,7 +25,7 @@ class URArm(RobotWrapper):
     # State information functions
     def get_joint_state(self):
         return self._controller.get_arm_joint_state()
-    
+
     def get_joint_velocity(self):
         return self._controller.get_arm_velocity()
 
@@ -37,16 +37,16 @@ class URArm(RobotWrapper):
 
     def get_joint_position(self):
         return self._controller.get_arm_position()
-    
+
     def get_cartesian_position(self):
         return self._controller.get_arm_cartesian_coords()
 
     def get_osc_position(self):
         return self._controller.get_arm_osc_position()
-    
+
     def get_pose(self):
         return self._controller.get_arm_pose()
-    
+
     def get_gripper_state(self):
         return self._controller.get_gripper_state()
 
@@ -65,6 +65,15 @@ class URArm(RobotWrapper):
 
     def move_velocity(self, input_velocity_values, duration):
         pass
-    
+
     def set_gripper_state(self, open):
         self._controller.set_gripper_state(open)
+
+    def move_gripper(self, position):
+        self._controller.move_gripper(position)
+
+    def stop_servo_control(self):
+        self._controller.stop_servo()
+
+    def restart_servo_control(self):
+        self._controller.restart_servo_control()

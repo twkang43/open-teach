@@ -47,4 +47,6 @@ dependencies:
       - shapely
       - rospkg
       - IPython
+      - pyqt5
+      - pyqt5-tools
 
