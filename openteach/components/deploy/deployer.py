@@ -52,7 +52,7 @@ class DeployServer(Component):
                 return True
             
             # Kinova should be applied earlier than allegro
-            # Add UR as 'ur', ur's gripper as 'gripper'
+            # Add UR as 'ur'
             robot_order = ['franka', 'ur', 'allegro']
 
             for robot in robot_order:
